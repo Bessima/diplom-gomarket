@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"github.com/Bessima/diplom-gomarket/internal/config"
+	"github.com/Bessima/diplom-gomarket/internal/handlers"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/Bessima/diplom-gomarket/internal/repository"
 	"github.com/Bessima/diplom-gomarket/internal/service"
 	"go.uber.org/zap"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -27,9 +29,17 @@ func run() error {
 	defer stop()
 
 	conf := config.InitConfig()
-	storage := repository.NewDBRepository(rootCtx, conf.DatabaseDNS)
+	storage := repository.NewUserRepository(rootCtx, conf.DatabaseDNS)
 
 	serverService := service.NewServerService(rootCtx, conf.Address, storage)
+
+	// Конфигурация JWT
+	jwtConfig := &handlers.JWTConfig{
+		SecretKey:       "your-secret-key-change-this-in-production",
+		AccessTokenTTL:  15 * time.Minute,
+		RefreshTokenTTL: 7 * 24 * time.Hour, // 7 дней
+	}
+	serverService.SetRouter(jwtConfig)
 
 	serverErr := make(chan error, 1)
 	logger.Log.Info("Running Server on", zap.String("address", conf.Address))

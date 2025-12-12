@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS users (
+    id       SERIAL PRIMARY KEY,
+    name     VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_name ON users (name);

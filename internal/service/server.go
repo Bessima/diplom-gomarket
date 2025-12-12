@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/Bessima/diplom-gomarket/internal/handlers"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/Bessima/diplom-gomarket/internal/repository"
 	"github.com/go-chi/chi/v5"
@@ -12,10 +13,10 @@ import (
 
 type ServerService struct {
 	Server  *http.Server
-	storage repository.StorageRepositoryI
+	storage repository.UserStorageRepositoryI
 }
 
-func NewServerService(rootContext context.Context, address string, storage repository.StorageRepositoryI) ServerService {
+func NewServerService(rootContext context.Context, address string, storage repository.UserStorageRepositoryI) ServerService {
 	server := &http.Server{
 		Addr: address,
 		BaseContext: func(_ net.Listener) context.Context {
@@ -25,18 +26,22 @@ func NewServerService(rootContext context.Context, address string, storage repos
 	return ServerService{Server: server, storage: storage}
 }
 
-func (serverService *ServerService) SetRouter() {
+func (serverService *ServerService) SetRouter(jwtConfig *handlers.JWTConfig) {
 	var router chi.Router
+	router = serverService.getRouter(jwtConfig)
 
 	serverService.Server.Handler = router
 }
 
-func (serverService *ServerService) getRouter() chi.Router {
+func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig) chi.Router {
 	router := chi.NewRouter()
 
 	router.Use(logger.RequestLogger)
 
-	//router.Get("/", handler.MainHandler(serverService.storage, templates))
+	authHandler := handlers.NewAuthHandler(jwtConfig, serverService.storage)
+	router.Post("/api/user/register/", authHandler.RegisterHandler)
+	router.Post("/api/user/login/", authHandler.LoginHandler)
+	router.Post("/api/user/refresh/", authHandler.RefreshHandler)
 
 	return router
 }
