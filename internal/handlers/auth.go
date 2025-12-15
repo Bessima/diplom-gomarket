@@ -264,8 +264,6 @@ func (h *AuthHandler) generateTokens(user *models.User) (string, string, error) 
 			Subject:   user.Username,
 		},
 	}
-	println(accessClaims.UserID)
-	println("accessClaims")
 
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	accessTokenString, err := accessToken.SignedString([]byte(h.jwtConfig.SecretKey))
@@ -295,7 +293,6 @@ func (h *AuthHandler) generateTokens(user *models.User) (string, string, error) 
 
 func (h *AuthHandler) ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
-	println("VALIDATE")
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(h.jwtConfig.SecretKey), nil
@@ -308,9 +305,6 @@ func (h *AuthHandler) ValidateToken(tokenString string) (*Claims, error) {
 	if !token.Valid {
 		return nil, jwt.ErrSignatureInvalid
 	}
-
-	println(claims)
-	println("66666")
 
 	return claims, nil
 }

@@ -33,7 +33,6 @@ func AuthMiddleware(authHandler *handlers.AuthHandler) func(http.Handler) http.H
 				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 				return
 			}
-			println(claims.UserID)
 			user, err := authHandler.UserStorage.GetUserByID(claims.UserID)
 			if err != nil || user == nil {
 				http.Error(w, "User not found", http.StatusUnauthorized)

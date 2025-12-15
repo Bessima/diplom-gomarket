@@ -45,11 +45,8 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 	if user == nil {
 		http.Error(w, "user was not got", http.StatusBadRequest)
 		logger.Log.Error("user was not got")
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	println(user.ID, orderId)
-	println("HERE")
 	err = h.OrderStorage.Create(user.ID, orderId)
 	if err != nil {
 		http.Error(w, "order was not created", http.StatusInternalServerError)
@@ -59,6 +56,28 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(map[string]string{"message": "Order added successfully!"})
+	if err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	}
+}
+
+func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r.Context())
+	if user == nil {
+		http.Error(w, "user was not got", http.StatusBadRequest)
+		logger.Log.Error("user was not got")
+		return
+	}
+
+	orders, err := h.OrderStorage.GetListByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "orders were not found", http.StatusInternalServerError)
+		logger.Log.Error(fmt.Sprintf("orders were not found, error: %v", err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(orders)
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}

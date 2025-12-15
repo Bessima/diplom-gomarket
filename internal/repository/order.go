@@ -15,6 +15,7 @@ type OrderRepository struct {
 type OrderStorageRepositoryI interface {
 	Create(user_id, order_id int) error
 	GetByID(id int) (*models.Order, error)
+	GetListByUserID(user_id int) ([]models.Order, error)
 }
 
 func NewOrderRepository(dbObj *db.DB) *OrderRepository {
@@ -37,7 +38,7 @@ func (repository *OrderRepository) Create(user_id, order_id int) error {
 }
 
 func (repository *OrderRepository) GetByID(id int) (*models.Order, error) {
-	query := `SELECT (id,user_id,amount,accrual,status) FROM orders WHERE id = $1`
+	query := `SELECT id,user_id,amount,accrual,status FROM orders WHERE id = $1`
 	return retry.DoRetryWithResult(context.Background(), func() (*models.Order, error) {
 		row := repository.db.Pool.QueryRow(
 			context.Background(),
@@ -48,5 +49,39 @@ func (repository *OrderRepository) GetByID(id int) (*models.Order, error) {
 		elem := models.Order{}
 		err := row.Scan(&elem.ID, &elem.UserID, &elem.Amount, &elem.Accrual, &elem.Status)
 		return &elem, err
+	})
+}
+
+func (repository *OrderRepository) GetListByUserID(user_id int) ([]models.Order, error) {
+	query := `SELECT id,user_id,amount,accrual,status FROM orders WHERE user_id = $1`
+	return retry.DoRetryWithResult(context.Background(), func() ([]models.Order, error) {
+		rows, err := repository.db.Pool.Query(
+			context.Background(),
+			query,
+			user_id,
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		orders := []models.Order{}
+		for rows.Next() {
+			var order models.Order
+			err = rows.Scan(&order.ID, &order.UserID, &order.Amount, &order.Accrual, &order.Status)
+
+			if err != nil {
+				return nil, err
+			}
+
+			orders = append(orders, order)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return nil, err
+		}
+
+		return orders, err
 	})
 }
