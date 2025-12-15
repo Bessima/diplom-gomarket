@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/Bessima/diplom-gomarket/internal/config/db"
-	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/Bessima/diplom-gomarket/internal/retry"
-	"go.uber.org/zap"
 )
 
 type UserRepository struct {
@@ -20,18 +18,7 @@ type UserStorageRepositoryI interface {
 	GetUserByID(id int) (*models.User, error)
 }
 
-func NewUserRepository(rootContext context.Context, databaseDNS string) *UserRepository {
-	dbObj, errDB := db.NewDB(rootContext, databaseDNS)
-
-	if errDB != nil {
-
-		logger.Log.Error(
-			"Unable to connect to database",
-			zap.String("path", databaseDNS),
-			zap.String("error", errDB.Error()),
-		)
-	}
-
+func NewUserRepository(dbObj *db.DB) *UserRepository {
 	return &UserRepository{db: dbObj}
 }
 
@@ -50,7 +37,7 @@ func (repository *UserRepository) CreateUser(username, passwordHash string) (*mo
 }
 
 func (repository *UserRepository) GetUserByUsername(username string) (*models.User, error) {
-	query := `SELECT name, password FROM users WHERE name = $1`
+	query := `SELECT id, name, password FROM users WHERE name = $1`
 	return retry.DoRetryWithResult(context.Background(), func() (*models.User, error) {
 		row := repository.db.Pool.QueryRow(
 			context.Background(),
@@ -59,13 +46,13 @@ func (repository *UserRepository) GetUserByUsername(username string) (*models.Us
 		)
 
 		elem := models.User{}
-		err := row.Scan(&elem.Username, &elem.PasswordHash)
+		err := row.Scan(&elem.ID, &elem.Username, &elem.PasswordHash)
 		return &elem, err
 	})
 }
 
 func (repository *UserRepository) GetUserByID(id int) (*models.User, error) {
-	query := `SELECT name, password FROM users WHERE id = $1`
+	query := `SELECT id, name, password FROM users WHERE id = $1`
 	return retry.DoRetryWithResult(context.Background(), func() (*models.User, error) {
 		row := repository.db.Pool.QueryRow(
 			context.Background(),
@@ -74,12 +61,7 @@ func (repository *UserRepository) GetUserByID(id int) (*models.User, error) {
 		)
 
 		elem := models.User{}
-		err := row.Scan(&elem.Username, &elem.PasswordHash)
+		err := row.Scan(&elem.ID, &elem.Username, &elem.PasswordHash)
 		return &elem, err
 	})
-}
-
-func (repository *UserRepository) Close() error {
-	repository.db.Close()
-	return nil
 }

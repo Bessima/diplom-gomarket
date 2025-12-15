@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"github.com/Bessima/diplom-gomarket/internal/config"
+	"github.com/Bessima/diplom-gomarket/internal/config/db"
 	"github.com/Bessima/diplom-gomarket/internal/handlers"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
-	"github.com/Bessima/diplom-gomarket/internal/repository"
 	"github.com/Bessima/diplom-gomarket/internal/service"
 	"go.uber.org/zap"
 	"os/signal"
@@ -29,9 +29,18 @@ func run() error {
 	defer stop()
 
 	conf := config.InitConfig()
-	storage := repository.NewUserRepository(rootCtx, conf.DatabaseDNS)
+	dbObj, errDB := db.NewDB(rootCtx, conf.DatabaseDNS)
 
-	serverService := service.NewServerService(rootCtx, conf.Address, storage)
+	if errDB != nil {
+		logger.Log.Error(
+			"Unable to connect to database",
+			zap.String("path", conf.DatabaseDNS),
+			zap.String("error", errDB.Error()),
+		)
+	}
+	defer dbObj.Close()
+
+	serverService := service.NewServerService(rootCtx, conf.Address, dbObj)
 
 	// Конфигурация JWT
 	jwtConfig := &handlers.JWTConfig{
