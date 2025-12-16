@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Bessima/diplom-gomarket/internal/handlers/schemas"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/Bessima/diplom-gomarket/internal/repository"
 	"io"
@@ -99,4 +100,30 @@ func checkLuhn(number string) bool {
 		double = !double
 	}
 	return sum%10 == 0
+}
+
+func (h *OrdersHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r.Context())
+	if user == nil {
+		http.Error(w, "user was not got", http.StatusBadRequest)
+		logger.Log.Error("user was not got")
+		return
+	}
+
+	balance, err := h.OrderStorage.GetBalanceUserID(user.ID)
+	if err != nil {
+		http.Error(w, "orders were not found", http.StatusInternalServerError)
+		logger.Log.Error(fmt.Sprintf("orders were not found, error: %v", err))
+		return
+	}
+	schema := schemas.BalanceResponse{
+		Current:   balance,
+		Withdrawn: 0,
+	}
+
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(schema)
+	if err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	}
 }

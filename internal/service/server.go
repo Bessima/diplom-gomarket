@@ -53,6 +53,7 @@ func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig) chi
 	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/logout/", authHandler.LogoutHandler)
 	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/orders/", orderHandler.Add)
 	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/orders/", orderHandler.GetOrders)
+	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/balance/", orderHandler.GetBalance)
 
 	return router
 }
