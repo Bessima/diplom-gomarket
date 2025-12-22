@@ -13,8 +13,9 @@ type Order struct {
 type OrderStatus string
 
 const (
-	NewStatus        OrderStatus = "NEW"
-	InvalidStatus    OrderStatus = "INVALID"
-	ProcessingStatus OrderStatus = "PROCESSING"
-	ProcessedStatus  OrderStatus = "PROCESSED"
+	NewStatus              OrderStatus = "NEW"
+	InvalidStatus          OrderStatus = "INVALID"
+	ProcessingStatus       OrderStatus = "PROCESSING"
+	RegisterAcSystemStatus OrderStatus = "REGISTER"
+	ProcessedStatus        OrderStatus = "PROCESSED"
 )

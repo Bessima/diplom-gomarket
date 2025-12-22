@@ -6,6 +6,7 @@ import (
 	"github.com/Bessima/diplom-gomarket/internal/config/db"
 	"github.com/Bessima/diplom-gomarket/internal/handlers"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
+	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/Bessima/diplom-gomarket/internal/service"
 	"go.uber.org/zap"
 	"os/signal"
@@ -30,6 +31,14 @@ func run() error {
 
 	conf := config.InitConfig()
 	dbObj, errDB := db.NewDB(rootCtx, conf.DatabaseDNS)
+
+	ordersForProcessing := make(chan models.Order, 10)
+	defer close(ordersForProcessing)
+
+	orderService := service.NewOrderService(dbObj, conf.GetAccrualAddressWithProtocol())
+
+	go orderService.AddNotProcessedOrders(ordersForProcessing)
+	go orderService.GetAccrualForOrder(ordersForProcessing)
 
 	if errDB != nil {
 		logger.Log.Error(

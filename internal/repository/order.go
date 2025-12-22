@@ -101,3 +101,73 @@ func (repository *OrderRepository) GetBalanceUserID(userId int) (int64, error) {
 		return sum, err
 	})
 }
+
+func (repository *OrderRepository) SetListForProcessing(ch chan models.Order) error {
+	query := `SELECT id,user_id,accrual,status FROM orders WHERE status IN ($1, $2)`
+	return retry.DoRetry(context.Background(), func() error {
+
+		rows, err := repository.db.Pool.Query(
+			context.Background(),
+			query,
+			models.NewStatus,
+			models.ProcessingStatus,
+		)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		//orders := []models.Order{}
+		var order models.Order
+
+		for rows.Next() {
+			err = rows.Scan(&order.ID, &order.UserID, &order.Accrual, &order.Status)
+
+			if err != nil {
+				return err
+			}
+			ch <- order
+
+			//orders = append(orders, order)
+		}
+
+		return rows.Err()
+	})
+}
+
+func (repository *OrderRepository) UpdateStatus(orderID int, newStatus models.OrderStatus) error {
+	query := `UPDATE orders SET status = $1 WHERE id = $2`
+	return retry.DoRetry(context.Background(), func() error {
+
+		row, err := repository.db.Pool.Exec(
+			context.Background(),
+			query,
+			newStatus,
+			orderID,
+		)
+		if row.RowsAffected() == 0 {
+			err = fmt.Errorf("Order with id %v already exists", orderID)
+		}
+		return err
+
+	})
+}
+
+func (repository *OrderRepository) SetAccrual(orderID int, accrual int) error {
+	query := `UPDATE orders SET accrual = $1 AND status = $2 WHERE id = $3`
+	return retry.DoRetry(context.Background(), func() error {
+
+		row, err := repository.db.Pool.Exec(
+			context.Background(),
+			query,
+			accrual,
+			models.ProcessedStatus,
+			orderID,
+		)
+		if row.RowsAffected() == 0 {
+			err = fmt.Errorf("order with id %v was not installed accrual value", orderID)
+		}
+		return err
+
+	})
+}

@@ -4,12 +4,14 @@ import (
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/caarlos0/env"
 	"go.uber.org/zap"
+	"strings"
 )
 
 type Config struct {
 	Address string `env:"RUN_ADDRESS"`
 
-	DatabaseDNS string `env:"DATABASE_URI"`
+	DatabaseDNS    string `env:"DATABASE_URI"`
+	AccrualAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"`
 }
 
 func InitConfig() *Config {
@@ -17,8 +19,9 @@ func InitConfig() *Config {
 	flags.Init()
 
 	cfg := Config{
-		Address:     flags.address,
-		DatabaseDNS: flags.dbDNS,
+		Address:        flags.address,
+		DatabaseDNS:    flags.dbDNS,
+		AccrualAddress: flags.accrualAddress,
 	}
 	cfg.parseEnv()
 
@@ -30,4 +33,14 @@ func (cfg *Config) parseEnv() {
 	if err != nil {
 		logger.Log.Warn("Getting an error while parsing the configuration", zap.String("err", err.Error()))
 	}
+}
+
+func (cfg *Config) GetAccrualAddressWithProtocol() string {
+	http := "http://"
+	https := "https://"
+
+	if strings.Contains(cfg.AccrualAddress, https) || strings.Contains(cfg.AccrualAddress, http) {
+		return cfg.AccrualAddress
+	}
+	return http + cfg.AccrualAddress
 }

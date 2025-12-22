@@ -1,0 +1,60 @@
+package accrual
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+)
+
+//GET /api/orders/{number}
+
+type AccrualResponse struct {
+	Order   int    `json:"order"`
+	Status  string `json:"status"`
+	Accrual int    `json:"accrual,omitempty"`
+}
+
+type AccrualClient struct {
+	httpClient *http.Client
+	address    string
+}
+
+func NewAccrualClient(address string) *AccrualClient {
+	client := AccrualClient{address: address, httpClient: &http.Client{}}
+	return &client
+}
+
+func (client AccrualClient) Get(orderNumber int) (*AccrualResponse, error) {
+	url := fmt.Sprintf("%s/api/orders/%d", client.address, orderNumber)
+	response, err := client.httpClient.Get(url)
+	if err != nil {
+		log.Printf("Failed to create resource at: %s and the error is: %v\n", url, err)
+		return nil, err
+	}
+
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			log.Printf("Error closing response body: %v\n", err)
+		}
+	}()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalf("Error reading response body: %v", err)
+	}
+
+	// Print the body as a string
+	fmt.Printf("Response Body: %s\n", body)
+
+	var answer AccrualResponse
+	err = json.Unmarshal(body, &answer)
+	if err != nil {
+		log.Fatalf("Error unmarshaling JSON: %v", err)
+	}
+
+	log.Println("Successful getting answer for order: ", orderNumber)
+
+	return &answer, nil
+}
