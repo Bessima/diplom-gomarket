@@ -13,26 +13,26 @@ type OrderRepository struct {
 }
 
 type OrderStorageRepositoryI interface {
-	Create(user_id, order_id int) error
+	Create(userID, orderID int) error
 	GetByID(id int) (*models.Order, error)
-	GetListByUserID(user_id int) ([]models.Order, error)
-	GetBalanceUserID(user_id int) (int64, error)
+	GetListByUserID(userID int) ([]models.Order, error)
+	GetBalanceUserID(userID int) (int64, error)
 }
 
 func NewOrderRepository(dbObj *db.DB) *OrderRepository {
 	return &OrderRepository{db: dbObj}
 }
 
-func (repository *OrderRepository) Create(userId, orderId int) error {
+func (repository *OrderRepository) Create(userID, orderID int) error {
 	query := `INSERT INTO orders (id, user_id, status) VALUES ($1, $2, $3)`
 
 	return retry.DoRetry(context.Background(), func() error {
-		row, err := repository.db.Pool.Exec(context.Background(), query, orderId, userId, models.NewStatus)
+		row, err := repository.db.Pool.Exec(context.Background(), query, orderID, userID, models.NewStatus)
 		if err != nil {
 			return err
 		}
 		if row.RowsAffected() == 0 {
-			err = fmt.Errorf("Order with id %v already exists", orderId)
+			err = fmt.Errorf("order with id %v already exists", orderID)
 		}
 		return err
 	})
@@ -53,13 +53,13 @@ func (repository *OrderRepository) GetByID(id int) (*models.Order, error) {
 	})
 }
 
-func (repository *OrderRepository) GetListByUserID(userId int) ([]models.Order, error) {
+func (repository *OrderRepository) GetListByUserID(userID int) ([]models.Order, error) {
 	query := `SELECT id,user_id,accrual,status FROM orders WHERE user_id = $1`
 	return retry.DoRetryWithResult(context.Background(), func() ([]models.Order, error) {
 		rows, err := repository.db.Pool.Query(
 			context.Background(),
 			query,
-			userId,
+			userID,
 		)
 		if err != nil {
 			return nil, err
@@ -87,13 +87,13 @@ func (repository *OrderRepository) GetListByUserID(userId int) ([]models.Order, 
 	})
 }
 
-func (repository *OrderRepository) GetBalanceUserID(userId int) (int64, error) {
+func (repository *OrderRepository) GetBalanceUserID(userID int) (int64, error) {
 	query := `SELECT sum(accrual) FROM orders WHERE user_id = $1 and status=$2`
 	return retry.DoRetryWithResult(context.Background(), func() (int64, error) {
 		row := repository.db.Pool.QueryRow(
 			context.Background(),
 			query,
-			userId,
+			userID,
 			models.ProcessedStatus,
 		)
 		var sum int64 = 0
@@ -146,7 +146,7 @@ func (repository *OrderRepository) UpdateStatus(orderID int, newStatus models.Or
 			orderID,
 		)
 		if row.RowsAffected() == 0 {
-			err = fmt.Errorf("Order with id %v already exists", orderID)
+			err = fmt.Errorf("order with id %v already exists", orderID)
 		}
 		return err
 

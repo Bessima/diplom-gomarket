@@ -30,13 +30,13 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bodyString := string(bodyBytes)
-	if checkLuhn(bodyString) == false {
+	if !checkLuhn(bodyString) {
 		http.Error(w, "invalid order number", http.StatusBadRequest)
 		logger.Log.Error(fmt.Sprintf("invalid order number: %s", bodyString))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	orderId, err := strconv.Atoi(bodyString)
+	orderID, err := strconv.Atoi(bodyString)
 	if err != nil {
 		http.Error(w, "invalid order number", http.StatusBadRequest)
 		return
@@ -48,7 +48,7 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Error("user was not got")
 		return
 	}
-	err = h.OrderStorage.Create(user.ID, orderId)
+	err = h.OrderStorage.Create(user.ID, orderID)
 	if err != nil {
 		http.Error(w, "order was not created", http.StatusInternalServerError)
 		logger.Log.Error(fmt.Sprintf("order was not created, error: %v", err))

@@ -29,10 +29,7 @@ func NewServerService(rootContext context.Context, address string, db *db.DB) Se
 }
 
 func (serverService *ServerService) SetRouter(jwtConfig *handlers.JWTConfig) {
-	var router chi.Router
-	router = serverService.getRouter(jwtConfig)
-
-	serverService.Server.Handler = router
+	serverService.Server.Handler = serverService.getRouter(jwtConfig)
 }
 
 func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig) chi.Router {

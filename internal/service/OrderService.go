@@ -49,6 +49,9 @@ func (service OrderService) GetAccrualForOrder(ordersForProcessing chan models.O
 		case models.RegisterAcSystemStatus:
 			if newStatus != order.Status && newStatus != models.RegisterAcSystemStatus {
 				err = service.repository.UpdateStatus(order.ID, newStatus)
+				if err != nil {
+					logger.Log.Warn(err.Error())
+				}
 				order.Status = newStatus
 			}
 			ordersForProcessing <- order
