@@ -31,7 +31,7 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 
 	bodyString := string(bodyBytes)
 	if !checkLuhn(bodyString) {
-		http.Error(w, "invalid order number", http.StatusBadRequest)
+		http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
 		logger.Log.Error(fmt.Sprintf("invalid order number: %s", bodyString))
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -48,14 +48,27 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Error("user was not got")
 		return
 	}
-	err = h.OrderStorage.Create(user.ID, orderID)
-	if err != nil {
-		http.Error(w, "order was not created", http.StatusInternalServerError)
-		logger.Log.Error(fmt.Sprintf("order was not created, error: %v", err))
+	order, _ := h.OrderStorage.GetByID(orderID)
+	if order != nil {
+		if order.UserID == user.ID {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("order already added"))
+			return
+		}
+
+		http.Error(w, "order was already added other user", http.StatusConflict)
+		logger.Log.Warn(fmt.Sprintf("order %d was already added other user", orderID))
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	err = h.OrderStorage.Create(user.ID, orderID)
+	if err != nil {
+		http.Error(w, "order was not created", http.StatusInternalServerError)
+		logger.Log.Warn(fmt.Sprintf("order was not created, error: %v", err))
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 	err = json.NewEncoder(w).Encode(map[string]string{"message": "Order added successfully!"})
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)

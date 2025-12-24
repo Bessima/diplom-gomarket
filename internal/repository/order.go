@@ -24,7 +24,7 @@ func NewOrderRepository(dbObj *db.DB) *OrderRepository {
 }
 
 func (repository *OrderRepository) Create(userID, orderID int) error {
-	query := `INSERT INTO orders (id, user_id, status) VALUES ($1, $2, $3)`
+	query := `INSERT INTO orders (id, user_id, status) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING`
 
 	return retry.DoRetry(context.Background(), func() error {
 		row, err := repository.db.Pool.Exec(context.Background(), query, orderID, userID, models.NewStatus)
