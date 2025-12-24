@@ -42,15 +42,15 @@ func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig) chi
 	orderRepository := repository.NewOrderRepository(serverService.db)
 
 	authHandler := handlers.NewAuthHandler(jwtConfig, userRepository)
-	router.Post("/api/user/register/", authHandler.RegisterHandler)
-	router.Post("/api/user/login/", authHandler.LoginHandler)
-	router.Post("/api/user/refresh/", authHandler.RefreshHandler)
+	router.Post("/api/user/register", authHandler.RegisterHandler)
+	router.Post("/api/user/login", authHandler.LoginHandler)
+	router.Post("/api/user/refresh", authHandler.RefreshHandler)
 
 	orderHandler := handlers.NewOrderHandler(orderRepository)
-	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/logout/", authHandler.LogoutHandler)
-	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/orders/", orderHandler.Add)
-	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/orders/", orderHandler.GetOrders)
-	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/balance/", orderHandler.GetBalance)
+	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/logout", authHandler.LogoutHandler)
+	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/orders", orderHandler.Add)
+	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/orders", orderHandler.GetOrders)
+	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/balance", orderHandler.GetBalance)
 
 	return router
 }

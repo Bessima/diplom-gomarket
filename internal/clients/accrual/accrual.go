@@ -3,6 +3,8 @@ package accrual
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
+	"go.uber.org/zap"
 	"io"
 	"log"
 	"net/http"
@@ -34,6 +36,11 @@ func (client AccrualClient) Get(orderNumber int) (*AccrualResponse, error) {
 		return nil, err
 	}
 
+	if response.StatusCode != http.StatusOK {
+		err := fmt.Errorf("failed to create resource at: %s , answer was with status code %d", url, response.StatusCode)
+		return nil, err
+	}
+
 	defer func() {
 		if err := response.Body.Close(); err != nil {
 			log.Printf("Error closing response body: %v\n", err)
@@ -42,16 +49,15 @@ func (client AccrualClient) Get(orderNumber int) (*AccrualResponse, error) {
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Fatalf("Error reading response body: %v", err)
+		logger.Log.Error("Error reading response body", zap.Error(err))
+		return nil, err
 	}
-
-	// Print the body as a string
-	fmt.Printf("Response Body: %s\n", body)
 
 	var answer AccrualResponse
 	err = json.Unmarshal(body, &answer)
 	if err != nil {
-		log.Fatalf("Error unmarshaling JSON: %v", err)
+		logger.Log.Error("Error unmarshalling JSON", zap.Error(err))
+		return nil, err
 	}
 
 	log.Println("Successful getting answer for order: ", orderNumber)
