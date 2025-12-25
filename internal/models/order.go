@@ -5,9 +5,17 @@ import "time"
 type Order struct {
 	ID         int         `json:"id"`
 	UserID     int         `json:"user_id"`
-	Accrual    *string     `json:"accrual,omitempty"`
+	Accrual    *float32    `json:"accrual,omitempty"`
 	Status     OrderStatus `json:"status"`
 	UploadedAt time.Time   `json:"uploaded_at"`
+}
+
+func (order *Order) SetAccrualAsFloat(accrualInt int32) {
+	if accrualInt == 0 {
+		return
+	}
+	val := float32(accrualInt) / 100
+	order.Accrual = &val
 }
 
 type OrderStatus string

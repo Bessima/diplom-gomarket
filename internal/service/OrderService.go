@@ -24,9 +24,13 @@ func NewOrderService(dbObj *db.DB, accrualAddress string) *OrderService {
 func (service OrderService) GetAccrualForOrder(ordersForProcessing chan models.Order) {
 
 	for order := range ordersForProcessing {
+		println("Что то новое попало в канал")
 		resp, err := service.accrualClient.Get(order.ID)
 		if err != nil {
 			logger.Log.Warn(err.Error())
+			//Заказы всегда будут в канале, если цель не достигнута
+			//time.Sleep(10 * time.Second)
+			//ordersForProcessing <- order
 			continue
 		}
 		switch newStatus := models.OrderStatus(resp.Status); newStatus {
@@ -39,7 +43,8 @@ func (service OrderService) GetAccrualForOrder(ordersForProcessing chan models.O
 			continue
 		case models.ProcessedStatus:
 			logger.Log.Info(fmt.Sprintf("Order %d has already processed status", order.ID))
-			err = service.repository.SetAccrual(order.ID, resp.Accrual)
+			accrualInt := int32(resp.Accrual * 100)
+			err = service.repository.SetAccrual(order.ID, accrualInt)
 			if err != nil {
 				logger.Log.Warn(fmt.Sprintf("Order %d was not saved in DB, %s", order.ID, err.Error()))
 				continue

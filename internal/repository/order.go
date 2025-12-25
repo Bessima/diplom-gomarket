@@ -16,7 +16,7 @@ type OrderStorageRepositoryI interface {
 	Create(userID, orderID int) error
 	GetByID(id int) (*models.Order, error)
 	GetListByUserID(userID int) ([]models.Order, error)
-	GetBalanceUserID(userID int) (int64, error)
+	GetBalanceUserID(userID int) (int32, error)
 }
 
 func NewOrderRepository(dbObj *db.DB) *OrderRepository {
@@ -69,10 +69,15 @@ func (repository *OrderRepository) GetListByUserID(userID int) ([]models.Order, 
 		orders := []models.Order{}
 		for rows.Next() {
 			var order models.Order
-			err = rows.Scan(&order.ID, &order.UserID, &order.Accrual, &order.Status)
+			var accrualInKopecks *int32
+			err = rows.Scan(&order.ID, &order.UserID, &accrualInKopecks, &order.Status)
 
 			if err != nil {
 				return nil, err
+			}
+
+			if accrualInKopecks != nil {
+				order.SetAccrualAsFloat(*accrualInKopecks)
 			}
 
 			orders = append(orders, order)
@@ -87,16 +92,16 @@ func (repository *OrderRepository) GetListByUserID(userID int) ([]models.Order, 
 	})
 }
 
-func (repository *OrderRepository) GetBalanceUserID(userID int) (int64, error) {
+func (repository *OrderRepository) GetBalanceUserID(userID int) (int32, error) {
 	query := `SELECT sum(accrual) FROM orders WHERE user_id = $1 and status=$2`
-	return retry.DoRetryWithResult(context.Background(), func() (int64, error) {
+	return retry.DoRetryWithResult(context.Background(), func() (int32, error) {
 		row := repository.db.Pool.QueryRow(
 			context.Background(),
 			query,
 			userID,
 			models.ProcessedStatus,
 		)
-		var sum int64 = 0
+		var sum int32 = 0
 		err := row.Scan(&sum)
 		return sum, err
 	})
@@ -117,7 +122,6 @@ func (repository *OrderRepository) SetListForProcessing(ch chan models.Order) er
 		}
 		defer rows.Close()
 
-		//orders := []models.Order{}
 		var order models.Order
 
 		for rows.Next() {
@@ -127,8 +131,6 @@ func (repository *OrderRepository) SetListForProcessing(ch chan models.Order) er
 				return err
 			}
 			ch <- order
-
-			//orders = append(orders, order)
 		}
 
 		return rows.Err()
@@ -153,7 +155,7 @@ func (repository *OrderRepository) UpdateStatus(orderID int, newStatus models.Or
 	})
 }
 
-func (repository *OrderRepository) SetAccrual(orderID int, accrual int) error {
+func (repository *OrderRepository) SetAccrual(orderID int, accrual int32) error {
 	query := `UPDATE orders SET accrual = $1 AND status = $2 WHERE id = $3`
 	return retry.DoRetry(context.Background(), func() error {
 

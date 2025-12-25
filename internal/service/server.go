@@ -6,6 +6,7 @@ import (
 	"github.com/Bessima/diplom-gomarket/internal/handlers"
 	middleware "github.com/Bessima/diplom-gomarket/internal/middlewares"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
+	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/Bessima/diplom-gomarket/internal/repository"
 	"github.com/go-chi/chi/v5"
 	"net"
@@ -28,11 +29,11 @@ func NewServerService(rootContext context.Context, address string, db *db.DB) Se
 	return ServerService{Server: server, db: db}
 }
 
-func (serverService *ServerService) SetRouter(jwtConfig *handlers.JWTConfig) {
-	serverService.Server.Handler = serverService.getRouter(jwtConfig)
+func (serverService *ServerService) SetRouter(jwtConfig *handlers.JWTConfig, ordersForProcessing chan models.Order) {
+	serverService.Server.Handler = serverService.getRouter(jwtConfig, ordersForProcessing)
 }
 
-func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig) chi.Router {
+func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig, ordersForProcessing chan models.Order) chi.Router {
 	router := chi.NewRouter()
 
 	router.Use(logger.RequestLogger)
@@ -46,7 +47,7 @@ func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig) chi
 	router.Post("/api/user/login", authHandler.LoginHandler)
 	router.Post("/api/user/refresh", authHandler.RefreshHandler)
 
-	orderHandler := handlers.NewOrderHandler(orderRepository)
+	orderHandler := handlers.NewOrderHandler(orderRepository, ordersForProcessing)
 	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/logout", authHandler.LogoutHandler)
 	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/orders", orderHandler.Add)
 	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/orders", orderHandler.GetOrders)

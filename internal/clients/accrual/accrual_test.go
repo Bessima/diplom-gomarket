@@ -28,7 +28,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 		name            string
 		orderNumber     int
 		expectedStatus  string
-		expectedAccrual int
+		expectedAccrual float32
 		mockResponse    AccrualResponse
 		statusCode      int
 	}{
@@ -52,8 +52,8 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 			name:            "processed order with accrual",
 			orderNumber:     345678,
 			expectedStatus:  "PROCESSED",
-			expectedAccrual: 500,
-			mockResponse:    AccrualResponse{Order: 345678, Status: "PROCESSED", Accrual: 500},
+			expectedAccrual: 500.5,
+			mockResponse:    AccrualResponse{Order: 345678, Status: "PROCESSED", Accrual: 500.5},
 			statusCode:      http.StatusOK,
 		},
 		{
@@ -271,5 +271,5 @@ func TestAccrualClient_Get_URLFormat(t *testing.T) {
 	require.NotNil(t, response)
 	assert.Equal(t, 1234567890, response.Order)
 	assert.Equal(t, "PROCESSED", response.Status)
-	assert.Equal(t, 1000, response.Accrual)
+	assert.Equal(t, float32(1000), response.Accrual)
 }

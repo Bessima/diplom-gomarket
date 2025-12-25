@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Bessima/diplom-gomarket/internal/handlers/schemas"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
+	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/Bessima/diplom-gomarket/internal/repository"
 	"io"
 	"net/http"
@@ -12,11 +13,12 @@ import (
 )
 
 type OrdersHandler struct {
-	OrderStorage repository.OrderStorageRepositoryI
+	OrderStorage        repository.OrderStorageRepositoryI
+	ordersForProcessing chan models.Order
 }
 
-func NewOrderHandler(storage repository.OrderStorageRepositoryI) *OrdersHandler {
-	return &OrdersHandler{OrderStorage: storage}
+func NewOrderHandler(storage repository.OrderStorageRepositoryI, ordersForProcessing chan models.Order) *OrdersHandler {
+	return &OrdersHandler{OrderStorage: storage, ordersForProcessing: ordersForProcessing}
 }
 
 func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
@@ -62,17 +64,16 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.OrderStorage.Create(user.ID, orderID)
+
 	if err != nil {
 		http.Error(w, "order was not created", http.StatusInternalServerError)
 		logger.Log.Warn(fmt.Sprintf("order was not created, error: %v", err))
 		return
 	}
+	h.ordersForProcessing <- models.Order{ID: orderID, UserID: user.ID, Status: models.NewStatus}
 
 	w.WriteHeader(http.StatusAccepted)
-	err = json.NewEncoder(w).Encode(map[string]string{"message": "Order added successfully!"})
-	if err != nil {
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
-	}
+	w.Write([]byte("Order added successfully!"))
 }
 
 func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +92,7 @@ func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(orders)
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
@@ -129,14 +131,12 @@ func (h *OrdersHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Error(fmt.Sprintf("orders were not found, error: %v", err))
 		return
 	}
-	schema := schemas.BalanceResponse{
-		Current:   balance,
-		Withdrawn: 0,
-	}
+	schema := schemas.NewBalanceResponse(balance, 0)
 
-	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(schema)
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
+	w.WriteHeader(http.StatusOK)
 }

@@ -10,12 +10,14 @@ import (
 	"net/http"
 )
 
-//GET /api/orders/{number}
-
 type AccrualResponse struct {
-	Order   int    `json:"order"`
-	Status  string `json:"status"`
-	Accrual int    `json:"accrual,omitempty"`
+	Order   int     `json:"order"`
+	Status  string  `json:"status"`
+	Accrual float32 `json:"accrual,omitempty"`
+}
+
+func (response *AccrualResponse) GetAccrualInInt() int32 {
+	return int32(response.Accrual * 100)
 }
 
 type AccrualClient struct {

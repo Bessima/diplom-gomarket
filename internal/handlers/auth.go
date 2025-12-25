@@ -168,10 +168,7 @@ func (h *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.WriteHeader(http.StatusOK)
-	err := json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
-	if err != nil {
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
-	}
+	w.Write([]byte("Logged out successfully"))
 }
 
 func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {

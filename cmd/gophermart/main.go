@@ -57,7 +57,7 @@ func run() error {
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 7 * 24 * time.Hour, // 7 дней
 	}
-	serverService.SetRouter(jwtConfig)
+	serverService.SetRouter(jwtConfig, ordersForProcessing)
 
 	serverErr := make(chan error, 1)
 	logger.Log.Info("Running Server on", zap.String("address", conf.Address))
