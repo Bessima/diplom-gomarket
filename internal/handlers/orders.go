@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/Bessima/diplom-gomarket/internal/handlers/schemas"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/Bessima/diplom-gomarket/internal/repository"
@@ -127,14 +127,16 @@ func (h *OrdersHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	balance, err := h.OrderStorage.GetBalanceUserID(user.ID)
 	if err != nil {
-		http.Error(w, "orders were not found", http.StatusInternalServerError)
-		logger.Log.Error(fmt.Sprintf("orders were not found, error: %v", err))
-		return
+		errNoRow := errors.New("no rows in result set")
+		if err.Error() != errNoRow.Error() {
+			http.Error(w, "Error to getting orders", http.StatusInternalServerError)
+			logger.Log.Warn(fmt.Sprintf("Error to getting orders, error: %v", err))
+			return
+		}
 	}
-	schema := schemas.NewBalanceResponse(balance, 0)
 
 	w.Header().Add("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(schema)
+	err = json.NewEncoder(w).Encode(balance)
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}

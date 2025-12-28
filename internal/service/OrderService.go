@@ -44,9 +44,10 @@ func (service OrderService) GetAccrualForOrder(ordersForProcessing chan models.O
 		case models.ProcessedStatus:
 			logger.Log.Info(fmt.Sprintf("Order %d has already processed status", order.ID))
 			accrualInt := int32(resp.Accrual * 100)
-			err = service.repository.SetAccrual(order.ID, accrualInt)
+			err = service.repository.SetAccrual(order.ID, order.UserID, accrualInt)
 			if err != nil {
 				logger.Log.Warn(fmt.Sprintf("Order %d was not saved in DB, %s", order.ID, err.Error()))
+				ordersForProcessing <- order
 				continue
 			}
 

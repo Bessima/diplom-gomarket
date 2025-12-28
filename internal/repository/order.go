@@ -16,7 +16,7 @@ type OrderStorageRepositoryI interface {
 	Create(userID, orderID int) error
 	GetByID(id int) (*models.Order, error)
 	GetListByUserID(userID int) ([]models.Order, error)
-	GetBalanceUserID(userID int) (int32, error)
+	GetBalanceUserID(userID int) (models.Balance, error)
 }
 
 func NewOrderRepository(dbObj *db.DB) *OrderRepository {
@@ -92,18 +92,27 @@ func (repository *OrderRepository) GetListByUserID(userID int) ([]models.Order, 
 	})
 }
 
-func (repository *OrderRepository) GetBalanceUserID(userID int) (int32, error) {
-	query := `SELECT sum(accrual) FROM orders WHERE user_id = $1 and status=$2`
-	return retry.DoRetryWithResult(context.Background(), func() (int32, error) {
+func (repository *OrderRepository) GetBalanceUserID(userID int) (models.Balance, error) {
+	query := `SELECT user_id, current, withdrawals FROM balance WHERE user_id = $1`
+	return retry.DoRetryWithResult(context.Background(), func() (models.Balance, error) {
 		row := repository.db.Pool.QueryRow(
 			context.Background(),
 			query,
 			userID,
-			models.ProcessedStatus,
 		)
-		var sum int32 = 0
-		err := row.Scan(&sum)
-		return sum, err
+		balance := models.NewBalance(userID)
+
+		var Sum int32
+		var Withdrawing int32
+		err := row.Scan(&Sum, &Withdrawing)
+		if err != nil {
+			return balance, err
+		}
+
+		balance.SetCurrent(Sum)
+		balance.SetWithdrawing(Withdrawing)
+
+		return balance, err
 	})
 }
 
@@ -155,21 +164,45 @@ func (repository *OrderRepository) UpdateStatus(orderID int, newStatus models.Or
 	})
 }
 
-func (repository *OrderRepository) SetAccrual(orderID int, accrual int32) error {
-	query := `UPDATE orders SET accrual = $1 AND status = $2 WHERE id = $3`
-	return retry.DoRetry(context.Background(), func() error {
+func (repository *OrderRepository) SetAccrual(orderID, userID int, accrual int32) error {
+	ctx := context.Background()
 
-		row, err := repository.db.Pool.Exec(
+	queryOrder := `UPDATE orders SET accrual = $1, status = $2 WHERE id = $3`
+	queryBalance := `INSERT INTO balance (user_id, current) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET current = balance.current + EXCLUDED.current`
+
+	return retry.DoRetry(context.Background(), func() error {
+		tx, err := repository.db.Pool.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				tx.Rollback(ctx)
+			}
+		}()
+
+		row, err := tx.Exec(
 			context.Background(),
-			query,
+			queryOrder,
 			accrual,
 			models.ProcessedStatus,
 			orderID,
 		)
 		if row.RowsAffected() == 0 {
 			err = fmt.Errorf("order with id %v was not installed accrual value", orderID)
+			return err
 		}
-		return err
 
+		rowBalance, err := tx.Exec(
+			context.Background(),
+			queryBalance,
+			userID,
+			accrual,
+		)
+		if rowBalance.RowsAffected() == 0 {
+			err = fmt.Errorf("order with id %v was not installed accrual value", orderID)
+			return err
+		}
+		return tx.Commit(ctx)
 	})
 }
