@@ -16,7 +16,6 @@ type OrderStorageRepositoryI interface {
 	Create(userID, orderID int) error
 	GetByID(id int) (*models.Order, error)
 	GetListByUserID(userID int) ([]models.Order, error)
-	GetBalanceUserID(userID int) (models.Balance, error)
 }
 
 func NewOrderRepository(dbObj *db.DB) *OrderRepository {
@@ -92,30 +91,6 @@ func (repository *OrderRepository) GetListByUserID(userID int) ([]models.Order, 
 	})
 }
 
-func (repository *OrderRepository) GetBalanceUserID(userID int) (models.Balance, error) {
-	query := `SELECT user_id, current, withdrawals FROM balance WHERE user_id = $1`
-	return retry.DoRetryWithResult(context.Background(), func() (models.Balance, error) {
-		row := repository.db.Pool.QueryRow(
-			context.Background(),
-			query,
-			userID,
-		)
-		balance := models.NewBalance(userID)
-
-		var Sum int32
-		var Withdrawing int32
-		err := row.Scan(&Sum, &Withdrawing)
-		if err != nil {
-			return balance, err
-		}
-
-		balance.SetCurrent(Sum)
-		balance.SetWithdrawing(Withdrawing)
-
-		return balance, err
-	})
-}
-
 func (repository *OrderRepository) SetListForProcessing(ch chan models.Order) error {
 	query := `SELECT id,user_id,accrual,status FROM orders WHERE status IN ($1, $2)`
 	return retry.DoRetry(context.Background(), func() error {
@@ -168,7 +143,7 @@ func (repository *OrderRepository) SetAccrual(orderID, userID int, accrual int32
 	ctx := context.Background()
 
 	queryOrder := `UPDATE orders SET accrual = $1, status = $2 WHERE id = $3`
-	queryBalance := `INSERT INTO balance (user_id, current) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET current = balance.current + EXCLUDED.current`
+	balanceRepository := NewBalanceRepository(repository.db)
 
 	return retry.DoRetry(context.Background(), func() error {
 		tx, err := repository.db.Pool.Begin(ctx)
@@ -193,14 +168,8 @@ func (repository *OrderRepository) SetAccrual(orderID, userID int, accrual int32
 			return err
 		}
 
-		rowBalance, err := tx.Exec(
-			context.Background(),
-			queryBalance,
-			userID,
-			accrual,
-		)
-		if rowBalance.RowsAffected() == 0 {
-			err = fmt.Errorf("order with id %v was not installed accrual value", orderID)
+		err = balanceRepository.SetAccrual(tx, orderID, userID, accrual)
+		if err != nil {
 			return err
 		}
 		return tx.Commit(ctx)

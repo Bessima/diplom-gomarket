@@ -14,11 +14,16 @@ import (
 
 type OrdersHandler struct {
 	OrderStorage        repository.OrderStorageRepositoryI
+	BalanceStorage      *repository.BalanceRepository
 	ordersForProcessing chan models.Order
 }
 
-func NewOrderHandler(storage repository.OrderStorageRepositoryI, ordersForProcessing chan models.Order) *OrdersHandler {
-	return &OrdersHandler{OrderStorage: storage, ordersForProcessing: ordersForProcessing}
+func NewOrderHandler(storage repository.OrderStorageRepositoryI, balanceRepository *repository.BalanceRepository, ordersForProcessing chan models.Order) *OrdersHandler {
+	return &OrdersHandler{
+		OrderStorage:        storage,
+		BalanceStorage:      balanceRepository,
+		ordersForProcessing: ordersForProcessing,
+	}
 }
 
 func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +37,7 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bodyString := string(bodyBytes)
-	if !checkLuhn(bodyString) {
+	if !CheckLuhn(bodyString) {
 		http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
 		logger.Log.Error(fmt.Sprintf("invalid order number: %s", bodyString))
 		w.WriteHeader(http.StatusBadRequest)
@@ -91,30 +96,13 @@ func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Add("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(orders)
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
-}
+	w.WriteHeader(http.StatusOK)
 
-func checkLuhn(number string) bool {
-	sum := 0
-	double := false
-	for i := len(number) - 1; i >= 0; i-- {
-		digit := int(number[i] - '0')
-
-		if double {
-			digit *= 2
-			if digit > 9 {
-				digit -= 9
-			}
-		}
-		sum += digit
-		double = !double
-	}
-	return sum%10 == 0
 }
 
 func (h *OrdersHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +113,7 @@ func (h *OrdersHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	balance, err := h.OrderStorage.GetBalanceUserID(user.ID)
+	balance, err := h.BalanceStorage.GetBalanceUserID(user.ID)
 	if err != nil {
 		errNoRow := errors.New("no rows in result set")
 		if err.Error() != errNoRow.Error() {

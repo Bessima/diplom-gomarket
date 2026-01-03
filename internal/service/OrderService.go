@@ -7,6 +7,7 @@ import (
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/Bessima/diplom-gomarket/internal/repository"
+	"time"
 )
 
 type OrderService struct {
@@ -24,13 +25,13 @@ func NewOrderService(dbObj *db.DB, accrualAddress string) *OrderService {
 func (service OrderService) GetAccrualForOrder(ordersForProcessing chan models.Order) {
 
 	for order := range ordersForProcessing {
-		println("Что то новое попало в канал")
+		//println("Что то новое попало в канал")
 		resp, err := service.accrualClient.Get(order.ID)
 		if err != nil {
 			logger.Log.Warn(err.Error())
 			//Заказы всегда будут в канале, если цель не достигнута
-			//time.Sleep(10 * time.Second)
-			//ordersForProcessing <- order
+			time.Sleep(10 * time.Second)
+			ordersForProcessing <- order
 			continue
 		}
 		switch newStatus := models.OrderStatus(resp.Status); newStatus {

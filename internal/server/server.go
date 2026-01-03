@@ -1,4 +1,4 @@
-package service
+package server
 
 import (
 	"context"
@@ -41,17 +41,23 @@ func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig, ord
 
 	userRepository := repository.NewUserRepository(serverService.db)
 	orderRepository := repository.NewOrderRepository(serverService.db)
+	withdrawalRepository := repository.NewWithdrawRepository(serverService.db)
+	balanceRepository := repository.NewBalanceRepository(serverService.db)
 
 	authHandler := handlers.NewAuthHandler(jwtConfig, userRepository)
 	router.Post("/api/user/register", authHandler.RegisterHandler)
 	router.Post("/api/user/login", authHandler.LoginHandler)
 	router.Post("/api/user/refresh", authHandler.RefreshHandler)
 
-	orderHandler := handlers.NewOrderHandler(orderRepository, ordersForProcessing)
+	orderHandler := handlers.NewOrderHandler(orderRepository, balanceRepository, ordersForProcessing)
 	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/logout", authHandler.LogoutHandler)
 	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/orders", orderHandler.Add)
 	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/orders", orderHandler.GetOrders)
 	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/balance", orderHandler.GetBalance)
+
+	withdrawalHandler := handlers.NewWithdrawHandler(withdrawalRepository, orderRepository, balanceRepository)
+	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/balance/withdraw", withdrawalHandler.Add)
+	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/withdrawals", withdrawalHandler.GetList)
 
 	return router
 }

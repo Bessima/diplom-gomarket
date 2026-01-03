@@ -7,6 +7,7 @@ import (
 	"github.com/Bessima/diplom-gomarket/internal/handlers"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/Bessima/diplom-gomarket/internal/models"
+	"github.com/Bessima/diplom-gomarket/internal/server"
 	"github.com/Bessima/diplom-gomarket/internal/service"
 	"go.uber.org/zap"
 	"os/signal"
@@ -49,7 +50,7 @@ func run() error {
 	}
 	defer dbObj.Close()
 
-	serverService := service.NewServerService(rootCtx, conf.Address, dbObj)
+	serverService := server.NewServerService(rootCtx, conf.Address, dbObj)
 
 	// Конфигурация JWT
 	jwtConfig := &handlers.JWTConfig{
