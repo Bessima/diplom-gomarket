@@ -22,12 +22,12 @@ func (service *WithdrawService) Set(user *models.User, withdrawRequest schemas.W
 	service.mu.Lock()
 	defer service.mu.Unlock()
 
-	orderId, err := withdrawRequest.GetOrderAsInt()
+	orderID, err := withdrawRequest.GetOrderAsInt()
 	if err != nil {
 		return errors.New("can't parse number of order")
 	}
 	withdrawInt := withdrawRequest.GetSumAsInt()
-	err = service.WithdrawRepository.Create(user.ID, orderId, withdrawInt)
+	err = service.WithdrawRepository.Create(user.ID, orderID, withdrawInt)
 	if err != nil {
 		return err
 	}
