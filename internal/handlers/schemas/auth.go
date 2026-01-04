@@ -1,12 +1,12 @@
 package schemas
 
 type RegisterRequest struct {
-	Username string `json:"username" validate:"required,min=3,max=50"`
+	Login    string `json:"login" validate:"required,min=3,max=50"`
 	Password string `json:"password" validate:"required,min=6,max=100"`
 }
 
 type LoginRequest struct {
-	Username string `json:"username" validate:"required"`
+	Login    string `json:"login" validate:"required"`
 	Password string `json:"password" validate:"required"`
 }
 

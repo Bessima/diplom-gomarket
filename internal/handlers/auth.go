@@ -23,8 +23,8 @@ const (
 )
 
 type Claims struct {
-	UserID   int    `json:"user_id"`
-	Username string `json:"username"`
+	UserID int    `json:"user_id"`
+	Login  string `json:"login"`
 	jwt.RegisteredClaims
 }
 
@@ -53,8 +53,8 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.Username) < 3 || len(req.Username) > 50 {
-		http.Error(w, "Username must be between 3 and 50 characters", http.StatusBadRequest)
+	if len(req.Login) < 3 || len(req.Login) > 50 {
+		http.Error(w, "Login must be between 3 and 50 characters", http.StatusBadRequest)
 		return
 	}
 	if len(req.Password) < 6 {
@@ -62,7 +62,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingUser, _ := h.UserStorage.GetUserByUsername(req.Username)
+	existingUser, _ := h.UserStorage.GetUserByLogin(req.Login)
 	if existingUser != nil {
 		http.Error(w, "User already exists", http.StatusConflict)
 		return
@@ -75,7 +75,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.UserStorage.CreateUser(req.Username, string(hashedPassword))
+	user, err := h.UserStorage.CreateUser(req.Login, string(hashedPassword))
 	if err != nil {
 		http.Error(w, "Error creating user", http.StatusInternalServerError)
 		logger.Log.Error(fmt.Errorf("error creating user in DB: %v", err).Error())
@@ -101,7 +101,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
@@ -115,7 +115,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.UserStorage.GetUserByUsername(req.Username)
+	user, err := h.UserStorage.GetUserByLogin(req.Login)
 	if err != nil || user == nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
@@ -253,12 +253,12 @@ func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) generateTokens(user *models.User) (string, string, error) {
 	// Access token
 	accessClaims := Claims{
-		UserID:   user.ID,
-		Username: user.Username,
+		UserID: user.ID,
+		Login:  user.Login,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(h.jwtConfig.AccessTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Subject:   user.Username,
+			Subject:   user.Login,
 		},
 	}
 
@@ -270,12 +270,12 @@ func (h *AuthHandler) generateTokens(user *models.User) (string, string, error) 
 
 	// Refresh token
 	refreshClaims := Claims{
-		UserID:   user.ID,
-		Username: user.Username,
+		UserID: user.ID,
+		Login:  user.Login,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(h.jwtConfig.RefreshTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Subject:   user.Username,
+			Subject:   user.Login,
 		},
 	}
 

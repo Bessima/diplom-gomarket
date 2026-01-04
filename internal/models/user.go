@@ -4,7 +4,7 @@ import "golang.org/x/crypto/bcrypt"
 
 type User struct {
 	ID           int    `json:"id"`
-	Username     string `json:"username"`
+	Login        string `json:"login"`
 	PasswordHash string `json:"-"`
 }
 

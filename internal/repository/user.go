@@ -14,7 +14,7 @@ type UserRepository struct {
 
 type UserStorageRepositoryI interface {
 	CreateUser(username, passwordHash string) (*models.User, error)
-	GetUserByUsername(username string) (*models.User, error)
+	GetUserByLogin(username string) (*models.User, error)
 	GetUserByID(id int) (*models.User, error)
 }
 
@@ -31,12 +31,12 @@ func (repository *UserRepository) CreateUser(username, passwordHash string) (*mo
 			return nil, errors.New("user was not created")
 		}
 		user := models.User{}
-		err := row.Scan(&user.ID, &user.Username, &user.PasswordHash)
+		err := row.Scan(&user.ID, &user.Login, &user.PasswordHash)
 		return &user, err
 	})
 }
 
-func (repository *UserRepository) GetUserByUsername(username string) (*models.User, error) {
+func (repository *UserRepository) GetUserByLogin(username string) (*models.User, error) {
 	query := `SELECT id, name, password FROM users WHERE name = $1`
 	return retry.DoRetryWithResult(context.Background(), func() (*models.User, error) {
 		row := repository.db.Pool.QueryRow(
@@ -46,7 +46,7 @@ func (repository *UserRepository) GetUserByUsername(username string) (*models.Us
 		)
 
 		elem := models.User{}
-		err := row.Scan(&elem.ID, &elem.Username, &elem.PasswordHash)
+		err := row.Scan(&elem.ID, &elem.Login, &elem.PasswordHash)
 		return &elem, err
 	})
 }
@@ -61,7 +61,7 @@ func (repository *UserRepository) GetUserByID(id int) (*models.User, error) {
 		)
 
 		elem := models.User{}
-		err := row.Scan(&elem.ID, &elem.Username, &elem.PasswordHash)
+		err := row.Scan(&elem.ID, &elem.Login, &elem.PasswordHash)
 		return &elem, err
 	})
 }
