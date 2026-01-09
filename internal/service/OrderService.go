@@ -25,7 +25,6 @@ func NewOrderService(dbObj *db.DB, accrualAddress string) *OrderService {
 func (service OrderService) GetAccrualForOrder(ordersForProcessing chan models.Order) {
 
 	for order := range ordersForProcessing {
-		//println("Что то новое попало в канал")
 		resp, err := service.accrualClient.Get(order.ID)
 		if err != nil {
 			logger.Log.Warn(err.Error())

@@ -7,11 +7,15 @@ import (
 	"strings"
 )
 
+const DefaultSecretKey = "your-secret-key-change-this-in-production"
+
 type Config struct {
 	Address string `env:"RUN_ADDRESS"`
 
 	DatabaseDNS    string `env:"DATABASE_URI"`
 	AccrualAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"`
+
+	SecretKey string `env:"SECRET_KEY"`
 }
 
 func InitConfig() *Config {
@@ -22,6 +26,7 @@ func InitConfig() *Config {
 		Address:        flags.address,
 		DatabaseDNS:    flags.dbDNS,
 		AccrualAddress: flags.accrualAddress,
+		SecretKey:      DefaultSecretKey,
 	}
 	cfg.parseEnv()
 
@@ -31,7 +36,7 @@ func InitConfig() *Config {
 func (cfg *Config) parseEnv() {
 	err := env.Parse(cfg)
 	if err != nil {
-		logger.Log.Warn("Getting an error while parsing the configuration", zap.String("err", err.Error()))
+		logger.Log.Warn("Getting an error while parsing the configuration", zap.String("customerror", err.Error()))
 	}
 }
 

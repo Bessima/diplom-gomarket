@@ -3,13 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Bessima/diplom-gomarket/internal/customerror"
 	"github.com/Bessima/diplom-gomarket/internal/handlers/schemas"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
 	"github.com/Bessima/diplom-gomarket/internal/repository"
 	"github.com/Bessima/diplom-gomarket/internal/service"
 	"io"
 	"net/http"
-	"strings"
 )
 
 type WithdrawHandler struct {
@@ -72,10 +72,9 @@ func (h *WithdrawHandler) Add(w http.ResponseWriter, r *http.Request) {
 	err = withdrawService.Set(user, body)
 
 	if err != nil {
-		if strings.Contains(err.Error(), "23505") {
-			errWithMessage := fmt.Sprintf("withdraw with orderID %v already exists", body.Order)
-			http.Error(w, errWithMessage, http.StatusUnprocessableEntity)
-			logger.Log.Warn(errWithMessage)
+		if customErr, ok := err.(customerror.CustomError); ok {
+			http.Error(w, customErr.Error(), customErr.GetHTTPCode())
+			logger.Log.Warn(customErr.Error())
 			return
 		}
 		errWithMessage := fmt.Sprintf("error while setting withdraw %v for user %d", err, user.ID)

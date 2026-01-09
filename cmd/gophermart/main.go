@@ -10,6 +10,7 @@ import (
 	"github.com/Bessima/diplom-gomarket/internal/server"
 	"github.com/Bessima/diplom-gomarket/internal/service"
 	"go.uber.org/zap"
+	"log"
 	"os/signal"
 	"syscall"
 	"time"
@@ -22,25 +23,17 @@ func main() {
 	}
 
 	if err := run(); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 
 func run() error {
-	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	ctx, cancelCtx := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancelCtx()
 
 	conf := config.InitConfig()
-	dbObj, errDB := db.NewDB(rootCtx, conf.DatabaseDNS)
 
-	ordersForProcessing := make(chan models.Order, 10)
-	defer close(ordersForProcessing)
-
-	orderService := service.NewOrderService(dbObj, conf.GetAccrualAddressWithProtocol())
-
-	go orderService.AddNotProcessedOrders(ordersForProcessing)
-	go orderService.GetAccrualForOrder(ordersForProcessing)
-
+	dbObj, errDB := db.NewDB(ctx, conf.DatabaseDNS)
 	if errDB != nil {
 		logger.Log.Error(
 			"Unable to connect to database",
@@ -50,11 +43,19 @@ func run() error {
 	}
 	defer dbObj.Close()
 
-	serverService := server.NewServerService(rootCtx, conf.Address, dbObj)
+	ordersForProcessing := make(chan models.Order, 10)
+	defer close(ordersForProcessing)
+
+	orderService := service.NewOrderService(dbObj, conf.GetAccrualAddressWithProtocol())
+
+	go orderService.AddNotProcessedOrders(ordersForProcessing)
+	go orderService.GetAccrualForOrder(ordersForProcessing)
+
+	serverService := server.NewServerService(ctx, conf.Address, dbObj)
 
 	// Конфигурация JWT
 	jwtConfig := &handlers.JWTConfig{
-		SecretKey:       "your-secret-key-change-this-in-production",
+		SecretKey:       conf.SecretKey,
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 7 * 24 * time.Hour, // 7 дней
 	}
@@ -67,10 +68,11 @@ func run() error {
 	// Ждем сигнал завершения или ошибку сервера
 	var err error
 	select {
-	case <-rootCtx.Done():
+	case <-ctx.Done():
 		logger.Log.Info("Received shutdown signal, shutting down.")
 	case err = <-serverErr:
 		logger.Log.Error("Server error", zap.Error(err))
+		return err
 	}
 
 	if shutdownErr := serverService.Shutdown(); shutdownErr != nil {

@@ -16,10 +16,6 @@ type AccrualResponse struct {
 	Accrual float32 `json:"accrual,omitempty"`
 }
 
-func (response *AccrualResponse) GetAccrualInInt() int32 {
-	return int32(response.Accrual * 100)
-}
-
 type AccrualClient struct {
 	httpClient *http.Client
 	address    string
