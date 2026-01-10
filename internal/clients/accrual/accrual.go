@@ -30,7 +30,7 @@ func (client AccrualClient) Get(orderNumber int) (*AccrualResponse, error) {
 	url := fmt.Sprintf("%s/api/orders/%d", client.address, orderNumber)
 	response, err := client.httpClient.Get(url)
 	if err != nil {
-		log.Printf("Failed to create resource at: %s and the error is: %v\n", url, err)
+		err = fmt.Errorf("Failed to create resource at: %s and the error is: %w\n", url, err)
 		return nil, err
 	}
 
@@ -41,7 +41,8 @@ func (client AccrualClient) Get(orderNumber int) (*AccrualResponse, error) {
 
 	defer func() {
 		if err := response.Body.Close(); err != nil {
-			log.Printf("Error closing response body: %v\n", err)
+			customErr := fmt.Errorf("Error closing response body: %v\n", err)
+			logger.Log.Warn(customErr.Error())
 		}
 	}()
 

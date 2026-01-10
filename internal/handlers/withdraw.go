@@ -77,7 +77,7 @@ func (h *WithdrawHandler) Add(w http.ResponseWriter, r *http.Request) {
 			logger.Log.Warn(customErr.Error())
 			return
 		}
-		errWithMessage := fmt.Sprintf("error while setting withdraw %v for user %d", err, user.ID)
+		errWithMessage := fmt.Sprintf("error while setting withdraw `%v` for user %d", err, user.ID)
 		http.Error(w, "withdraw was not installed for user", http.StatusInternalServerError)
 		logger.Log.Warn(errWithMessage)
 		return
