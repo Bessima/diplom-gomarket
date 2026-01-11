@@ -1,6 +1,7 @@
 package accrual
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -66,6 +67,8 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Создаем тестовый сервер
@@ -84,7 +87,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 			client := NewAccrualClient(server.URL)
 
 			// Вызываем метод Get
-			response, err := client.Get(tc.orderNumber)
+			response, err := client.Get(ctx, tc.orderNumber)
 
 			// Проверяем результаты
 			require.NoError(t, err)
@@ -122,6 +125,7 @@ func TestAccrualClient_Get_HTTPErrors(t *testing.T) {
 			expectError: true,
 		},
 	}
+	ctx := context.Background()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -131,7 +135,7 @@ func TestAccrualClient_Get_HTTPErrors(t *testing.T) {
 			defer server.Close()
 
 			client := NewAccrualClient(server.URL)
-			response, err := client.Get(tc.orderNumber)
+			response, err := client.Get(ctx, tc.orderNumber)
 
 			if tc.expectError {
 				assert.Error(t, err)
@@ -148,7 +152,7 @@ func TestAccrualClient_Get_NetworkError(t *testing.T) {
 	// Используем несуществующий адрес для имитации сетевой ошибки
 	client := NewAccrualClient("http://localhost:99999")
 
-	response, err := client.Get(123456)
+	response, err := client.Get(context.Background(), 123456)
 
 	assert.Error(t, err)
 	assert.Nil(t, response)
@@ -165,7 +169,7 @@ func TestAccrualClient_Get_InvalidJSON(t *testing.T) {
 
 	client := NewAccrualClient(server.URL)
 
-	resp, err := client.Get(123456)
+	resp, err := client.Get(context.Background(), 123456)
 	assert.Error(t, err)
 	assert.Nil(t, resp)
 }
@@ -187,7 +191,7 @@ func TestAccrualClient_Get_ReadBodyError(t *testing.T) {
 
 	client := NewAccrualClient(server.URL)
 
-	resp, err := client.Get(123456)
+	resp, err := client.Get(context.Background(), 123456)
 	assert.Error(t, err)
 	assert.Nil(t, resp)
 }
@@ -227,7 +231,7 @@ func TestAccrualClient_Get_ResponseBodyCloseError(t *testing.T) {
 	}
 
 	// Метод должен отработать несмотря на ошибку закрытия (она только логируется)
-	response, err := client.Get(123456)
+	response, err := client.Get(context.Background(), 123456)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
@@ -265,7 +269,7 @@ func TestAccrualClient_Get_URLFormat(t *testing.T) {
 	defer server.Close()
 
 	client := NewAccrualClient(server.URL)
-	response, err := client.Get(1234567890)
+	response, err := client.Get(context.Background(), 1234567890)
 
 	require.NoError(t, err)
 	require.NotNil(t, response)

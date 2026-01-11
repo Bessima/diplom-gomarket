@@ -1,14 +1,19 @@
 package accrual
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
+	"github.com/Bessima/diplom-gomarket/internal/retry"
 	"go.uber.org/zap"
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
+
+const timeToSleep = time.Duration(30) * time.Second
 
 type AccrualResponse struct {
 	Order   int     `json:"order"`
@@ -26,40 +31,50 @@ func NewAccrualClient(address string) *AccrualClient {
 	return &client
 }
 
-func (client AccrualClient) Get(orderNumber int) (*AccrualResponse, error) {
+func (client AccrualClient) Get(ctx context.Context, orderNumber int) (*AccrualResponse, error) {
 	url := fmt.Sprintf("%s/api/orders/%d", client.address, orderNumber)
-	response, err := client.httpClient.Get(url)
-	if err != nil {
-		err = fmt.Errorf("Failed to create resource at: %s and the error is: %w\n", url, err)
-		return nil, err
-	}
 
-	if response.StatusCode != http.StatusOK {
-		err := fmt.Errorf("failed to create resource at: %s , answer was with status code %d", url, response.StatusCode)
-		return nil, err
-	}
+	return retry.DoRetryWithResult(ctx, func() (*AccrualResponse, error) {
+		response, err := client.httpClient.Get(url)
 
-	defer func() {
-		if err := response.Body.Close(); err != nil {
-			customErr := fmt.Errorf("Error closing response body: %v\n", err)
-			logger.Log.Warn(customErr.Error())
+		if err != nil {
+			err = fmt.Errorf("Failed to create resource at: %s and the error is: %w\n", url, err)
+			return nil, err
 		}
-	}()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		logger.Log.Error("Error reading response body", zap.Error(err))
-		return nil, err
-	}
+		if response.StatusCode != http.StatusOK {
+			if response.StatusCode == http.StatusTooManyRequests {
+				err := fmt.Errorf("failed to create resource at: %s , too many requests by accrual system", url)
+				time.Sleep(timeToSleep)
+				return nil, err
+			}
+			err := fmt.Errorf("failed to create resource at: %s , answer was with status code %d", url, response.StatusCode)
+			return nil, err
+		}
 
-	var answer AccrualResponse
-	err = json.Unmarshal(body, &answer)
-	if err != nil {
-		logger.Log.Error("Error unmarshalling JSON", zap.Error(err))
-		return nil, err
-	}
+		defer func() {
+			if err := response.Body.Close(); err != nil {
+				customErr := fmt.Errorf("Error closing response body: %v\n", err)
+				logger.Log.Warn(customErr.Error())
+			}
+		}()
 
-	log.Println("Successful getting answer for order: ", orderNumber)
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			logger.Log.Error("Error reading response body", zap.Error(err))
+			return nil, err
+		}
 
-	return &answer, nil
+		var answer AccrualResponse
+		err = json.Unmarshal(body, &answer)
+		if err != nil {
+			logger.Log.Error("Error unmarshalling JSON", zap.Error(err))
+			return nil, err
+		}
+
+		log.Println("Successful getting answer for order: ", orderNumber)
+
+		return &answer, nil
+	}, retry.AccrualRetryConfig)
+
 }

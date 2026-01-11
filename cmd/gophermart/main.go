@@ -43,13 +43,16 @@ func run() error {
 	}
 	defer dbObj.Close()
 
-	ordersForProcessing := make(chan models.Order, 10)
+	ordersForProcessing := make(chan models.Order, 5)
 	defer close(ordersForProcessing)
 
 	orderService := service.NewOrderService(dbObj, conf.GetAccrualAddressWithProtocol())
 
 	go orderService.AddNotProcessedOrders(ordersForProcessing)
-	go orderService.GetAccrualForOrder(ordersForProcessing)
+
+	for w := 0; w < 5; w++ {
+		go orderService.GetAccrualForOrder(ctx, ordersForProcessing)
+	}
 
 	serverService := server.NewServerService(ctx, conf.Address, dbObj)
 

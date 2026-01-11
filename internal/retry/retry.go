@@ -17,6 +17,14 @@ type RetryConfig struct {
 	ShouldRetry func(error) bool
 }
 
+var AccrualRetryConfig = RetryConfig{
+	MaxRetries: 3,
+	Delays:     []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second},
+	ShouldRetry: func(err error) bool {
+		return true
+	},
+}
+
 var PostgresStorageRetryConfig = RetryConfig{
 	MaxRetries: 3,
 	Delays:     []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second},

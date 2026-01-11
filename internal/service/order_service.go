@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"github.com/Bessima/diplom-gomarket/internal/clients/accrual"
 	"github.com/Bessima/diplom-gomarket/internal/config/db"
@@ -22,10 +23,10 @@ func NewOrderService(dbObj *db.DB, accrualAddress string) *OrderService {
 	return &OrderService{repository: rep, accrualClient: accrualClient}
 }
 
-func (service OrderService) GetAccrualForOrder(ordersForProcessing chan models.Order) {
+func (service OrderService) GetAccrualForOrder(ctx context.Context, ordersForProcessing chan models.Order) {
 
 	for order := range ordersForProcessing {
-		resp, err := service.accrualClient.Get(order.ID)
+		resp, err := service.accrualClient.Get(ctx, order.ID)
 		if err != nil {
 			logger.Log.Warn(err.Error())
 			//Заказы всегда будут в канале, если цель не достигнута
