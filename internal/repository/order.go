@@ -47,7 +47,15 @@ func (repository *OrderRepository) GetByID(id int) (*models.Order, error) {
 		)
 
 		elem := models.Order{}
-		err := row.Scan(&elem.ID, &elem.UserID, &elem.Accrual, &elem.Status)
+		var accrualInKopecks *int32
+		err := row.Scan(&elem.ID, &elem.UserID, &accrualInKopecks, &elem.Status)
+		if err != nil {
+			return &elem, err
+		}
+		if accrualInKopecks != nil {
+			elem.SetAccrualAsFloat(*accrualInKopecks)
+		}
+
 		return &elem, err
 	})
 }
@@ -109,11 +117,16 @@ func (repository *OrderRepository) SetListForProcessing(ch chan models.Order) er
 		var order models.Order
 
 		for rows.Next() {
-			err = rows.Scan(&order.ID, &order.UserID, &order.Accrual, &order.Status)
+			var accrualInKopecks *int32
+			err = rows.Scan(&order.ID, &order.UserID, &accrualInKopecks, &order.Status)
+			if accrualInKopecks != nil {
+				order.SetAccrualAsFloat(*accrualInKopecks)
+			}
 
 			if err != nil {
 				return err
 			}
+
 			ch <- order
 		}
 
@@ -132,7 +145,7 @@ func (repository *OrderRepository) UpdateStatus(orderID int, newStatus models.Or
 			orderID,
 		)
 		if row.RowsAffected() == 0 {
-			err = fmt.Errorf("order with id %v already exists", orderID)
+			err = fmt.Errorf("order with id %v not found", orderID)
 		}
 		return err
 
@@ -163,6 +176,9 @@ func (repository *OrderRepository) SetAccrual(orderID, userID int, accrual int32
 			models.ProcessedStatus,
 			orderID,
 		)
+		if err != nil {
+			return err
+		}
 		if row.RowsAffected() == 0 {
 			err = fmt.Errorf("order with id %v was not installed accrual value", orderID)
 			return err

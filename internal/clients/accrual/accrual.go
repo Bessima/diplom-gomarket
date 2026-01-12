@@ -38,7 +38,7 @@ func (client AccrualClient) Get(ctx context.Context, orderNumber int) (*AccrualR
 		response, err := client.httpClient.Get(url)
 
 		if err != nil {
-			err = fmt.Errorf("Failed to create resource at: %s and the error is: %w\n", url, err)
+			err = fmt.Errorf("failed to create resource at: %s and the error is: %w", url, err)
 			return nil, err
 		}
 
@@ -54,7 +54,7 @@ func (client AccrualClient) Get(ctx context.Context, orderNumber int) (*AccrualR
 
 		defer func() {
 			if err := response.Body.Close(); err != nil {
-				customErr := fmt.Errorf("Error closing response body: %v\n", err)
+				customErr := fmt.Errorf("error closing response body: %v", err)
 				logger.Log.Warn(customErr.Error())
 			}
 		}()

@@ -32,8 +32,7 @@ func (repository *BalanceRepository) GetBalanceUserID(userID int) (models.Balanc
 		var Withdrawing int32
 		err := row.Scan(&Sum, &Withdrawing)
 		if err != nil {
-			errNoRow := errors.New("no rows in result set")
-			if err.Error() == errNoRow.Error() {
+			if errors.Is(err, pgx.ErrNoRows) {
 				// Считаем, что запрашиваемый пользователь есть, но пока не совершил покупок.
 				// ? Возможно, при создании пользователя сразу стоит создавать таблицу баланса
 				return balance, nil
@@ -57,13 +56,16 @@ func (repository *BalanceRepository) SetWithdrawForUserID(userID int, withdraw i
 			withdraw,
 			userID,
 		)
+		if err != nil {
+			return err
+		}
 
-		if err != nil || row.RowsAffected() == 0 {
+		if row.RowsAffected() == 0 {
 			errNoRow := fmt.Errorf("not update balance for user %d", userID)
 			return errNoRow
 		}
 
-		return err
+		return nil
 	})
 }
 
