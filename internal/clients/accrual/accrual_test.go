@@ -38,7 +38,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 			orderNumber:     123456,
 			expectedStatus:  "REGISTERED",
 			expectedAccrual: 0,
-			mockResponse:    AccrualResponse{Order: 123456, Status: "REGISTERED"},
+			mockResponse:    AccrualResponse{Order: "123456", Status: "REGISTERED"},
 			statusCode:      http.StatusOK,
 		},
 		{
@@ -46,7 +46,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 			orderNumber:     789012,
 			expectedStatus:  "PROCESSING",
 			expectedAccrual: 0,
-			mockResponse:    AccrualResponse{Order: 789012, Status: "PROCESSING"},
+			mockResponse:    AccrualResponse{Order: "789012", Status: "PROCESSING"},
 			statusCode:      http.StatusOK,
 		},
 		{
@@ -54,7 +54,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 			orderNumber:     345678,
 			expectedStatus:  "PROCESSED",
 			expectedAccrual: 500.5,
-			mockResponse:    AccrualResponse{Order: 345678, Status: "PROCESSED", Accrual: 500.5},
+			mockResponse:    AccrualResponse{Order: "345678", Status: "PROCESSED", Accrual: 500.5},
 			statusCode:      http.StatusOK,
 		},
 		{
@@ -62,7 +62,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 			orderNumber:     999999,
 			expectedStatus:  "INVALID",
 			expectedAccrual: 0,
-			mockResponse:    AccrualResponse{Order: 999999, Status: "INVALID"},
+			mockResponse:    AccrualResponse{Order: "999999", Status: "INVALID"},
 			statusCode:      http.StatusOK,
 		},
 	}
@@ -182,7 +182,7 @@ func TestAccrualClient_Get_ReadBodyError(t *testing.T) {
 		// Используем ResponseWriter, который возвращает ошибку при чтении
 		hj := &httptest.ResponseRecorder{}
 		hj.WriteHeader(http.StatusOK)
-		json.NewEncoder(hj).Encode(AccrualResponse{Order: 123456, Status: "PROCESSING"})
+		json.NewEncoder(hj).Encode(AccrualResponse{Order: "123456", Status: "PROCESSING"})
 
 		// Заменяем тело на reader, который возвращает ошибку
 		w.Header().Set("Content-Length", "100")
@@ -203,7 +203,7 @@ func TestAccrualClient_Get_ResponseBodyCloseError(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 
 		// Записываем валидный JSON
-		json.NewEncoder(w).Encode(AccrualResponse{Order: 123456, Status: "PROCESSING"})
+		json.NewEncoder(w).Encode(AccrualResponse{Order: "123456", Status: "PROCESSING"})
 	}))
 	defer server.Close()
 
@@ -261,7 +261,7 @@ func TestAccrualClient_Get_URLFormat(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(AccrualResponse{
-			Order:   1234567890,
+			Order:   "1234567890",
 			Status:  "PROCESSED",
 			Accrual: 1000,
 		})

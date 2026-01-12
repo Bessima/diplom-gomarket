@@ -16,7 +16,7 @@ import (
 const timeToSleep = time.Duration(30) * time.Second
 
 type AccrualResponse struct {
-	Order   int     `json:"order"`
+	Order   string  `json:"order"`
 	Status  string  `json:"status"`
 	Accrual float32 `json:"accrual,omitempty"`
 }

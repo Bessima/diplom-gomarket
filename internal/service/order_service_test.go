@@ -84,7 +84,7 @@ func TestOrderService_GetAccrualForOrder_ProcessedStatus(t *testing.T) {
 	}
 
 	accrualResponse := &accrual.AccrualResponse{
-		Order:   12345,
+		Order:   "12345",
 		Status:  string(models.ProcessedStatus),
 		Accrual: 100.50, // 100.50 рублей
 	}
@@ -128,7 +128,7 @@ func TestOrderService_GetAccrualForOrder_InvalidStatus(t *testing.T) {
 	}
 
 	accrualResponse := &accrual.AccrualResponse{
-		Order:  12345,
+		Order:  "12345",
 		Status: string(models.InvalidStatus),
 	}
 
@@ -170,7 +170,7 @@ func TestOrderService_GetAccrualForOrder_ProcessingStatus(t *testing.T) {
 	}
 
 	accrualResponse := &accrual.AccrualResponse{
-		Order:  12345,
+		Order:  "12345",
 		Status: string(models.ProcessingStatus),
 	}
 
@@ -296,7 +296,7 @@ func TestOrderService_GetAccrualForOrder_SetAccrualError(t *testing.T) {
 	}
 
 	accrualResponse := &accrual.AccrualResponse{
-		Order:   12345,
+		Order:   "12345",
 		Status:  string(models.ProcessedStatus),
 		Accrual: 100.50,
 	}
@@ -409,7 +409,7 @@ func TestOrderService_GetAccrualForOrder_UpdateStatusError(t *testing.T) {
 	}
 
 	accrualResponse := &accrual.AccrualResponse{
-		Order:  12345,
+		Order:  "12345",
 		Status: string(models.InvalidStatus),
 	}
 
