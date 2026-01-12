@@ -1,13 +1,11 @@
 package repository
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/Bessima/diplom-gomarket/internal/customerror"
-	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pashagolub/pgxmock/v3"
@@ -21,7 +19,8 @@ func TestWithdrawRepository_Create_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testWithdrawRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewWithdrawRepository(dbObj)
 
 	userID := 1
 	orderID := int64(12345)
@@ -32,7 +31,7 @@ func TestWithdrawRepository_Create_Success(t *testing.T) {
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	// Act
-	err = testRepo.Create(userID, orderID, sum)
+	err = repo.Create(userID, orderID, sum)
 
 	// Assert
 	assert.NoError(t, err)
@@ -45,7 +44,8 @@ func TestWithdrawRepository_Create_UniqueViolation(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testWithdrawRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewWithdrawRepository(dbObj)
 
 	userID := 1
 	orderID := int64(12345)
@@ -61,7 +61,7 @@ func TestWithdrawRepository_Create_UniqueViolation(t *testing.T) {
 		WillReturnError(pgErr)
 
 	// Act
-	err = testRepo.Create(userID, orderID, sum)
+	err = repo.Create(userID, orderID, sum)
 
 	// Assert
 	assert.Error(t, err)
@@ -76,7 +76,8 @@ func TestWithdrawRepository_Create_NoRowsAffected(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testWithdrawRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewWithdrawRepository(dbObj)
 
 	userID := 1
 	orderID := int64(12345)
@@ -87,7 +88,7 @@ func TestWithdrawRepository_Create_NoRowsAffected(t *testing.T) {
 		WillReturnResult(pgxmock.NewResult("INSERT", 0))
 
 	// Act
-	err = testRepo.Create(userID, orderID, sum)
+	err = repo.Create(userID, orderID, sum)
 
 	// Assert
 	assert.Error(t, err)
@@ -102,7 +103,8 @@ func TestWithdrawRepository_Create_DatabaseError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testWithdrawRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewWithdrawRepository(dbObj)
 
 	userID := 1
 	orderID := int64(12345)
@@ -118,7 +120,7 @@ func TestWithdrawRepository_Create_DatabaseError(t *testing.T) {
 		WillReturnError(pgErr)
 
 	// Act
-	err = testRepo.Create(userID, orderID, sum)
+	err = repo.Create(userID, orderID, sum)
 
 	// Assert
 	assert.Error(t, err)
@@ -132,7 +134,8 @@ func TestWithdrawRepository_GetListByUserID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testWithdrawRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewWithdrawRepository(dbObj)
 
 	userID := 1
 	now := time.Now()
@@ -146,7 +149,7 @@ func TestWithdrawRepository_GetListByUserID_Success(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	withdrawals, err := testRepo.GetListByUserID(userID)
+	withdrawals, err := repo.GetListByUserID(userID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -170,7 +173,8 @@ func TestWithdrawRepository_GetListByUserID_Empty(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testWithdrawRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewWithdrawRepository(dbObj)
 
 	userID := 999
 
@@ -181,7 +185,7 @@ func TestWithdrawRepository_GetListByUserID_Empty(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	withdrawals, err := testRepo.GetListByUserID(userID)
+	withdrawals, err := repo.GetListByUserID(userID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -195,7 +199,8 @@ func TestWithdrawRepository_GetListByUserID_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testWithdrawRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewWithdrawRepository(dbObj)
 
 	userID := 1
 	expectedError := errors.New("query error")
@@ -205,7 +210,7 @@ func TestWithdrawRepository_GetListByUserID_QueryError(t *testing.T) {
 		WillReturnError(expectedError)
 
 	// Act
-	withdrawals, err := testRepo.GetListByUserID(userID)
+	withdrawals, err := repo.GetListByUserID(userID)
 
 	// Assert
 	assert.Error(t, err)
@@ -219,7 +224,8 @@ func TestWithdrawRepository_GetListByUserID_ScanError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testWithdrawRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewWithdrawRepository(dbObj)
 
 	userID := 1
 	now := time.Now()
@@ -233,7 +239,7 @@ func TestWithdrawRepository_GetListByUserID_ScanError(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	withdrawals, err := testRepo.GetListByUserID(userID)
+	withdrawals, err := repo.GetListByUserID(userID)
 
 	// Assert
 	assert.Error(t, err)
@@ -275,14 +281,15 @@ func TestWithdrawRepository_Create_DifferentAmounts(t *testing.T) {
 			require.NoError(t, err)
 			defer mock.Close()
 
-			testRepo := &testWithdrawRepository{mock: mock}
+			dbObj := NewTestDB(mock)
+			repo := NewWithdrawRepository(dbObj)
 
 			mock.ExpectExec("INSERT INTO withdrawals").
 				WithArgs(tc.userID, tc.orderID, tc.sum).
 				WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 			// Act
-			err = testRepo.Create(tc.userID, tc.orderID, tc.sum)
+			err = repo.Create(tc.userID, tc.orderID, tc.sum)
 
 			// Assert
 			assert.NoError(t, err)
@@ -331,7 +338,8 @@ func TestWithdrawRepository_GetListByUserID_MultipleUsers(t *testing.T) {
 			require.NoError(t, err)
 			defer mock.Close()
 
-			testRepo := &testWithdrawRepository{mock: mock}
+			dbObj := NewTestDB(mock)
+			repo := NewWithdrawRepository(dbObj)
 
 			rows := pgxmock.NewRows([]string{"order_id", "user_id", "sum", "processed_at"})
 			for _, w := range tc.withdrawals {
@@ -343,7 +351,7 @@ func TestWithdrawRepository_GetListByUserID_MultipleUsers(t *testing.T) {
 				WillReturnRows(rows)
 
 			// Act
-			withdrawals, err := testRepo.GetListByUserID(tc.userID)
+			withdrawals, err := repo.GetListByUserID(tc.userID)
 
 			// Assert
 			assert.NoError(t, err)
@@ -355,60 +363,4 @@ func TestWithdrawRepository_GetListByUserID_MultipleUsers(t *testing.T) {
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
-}
-
-// testWithdrawRepository - тестовая версия репозитория для работы с моками
-type testWithdrawRepository struct {
-	mock pgxmock.PgxPoolIface
-}
-
-func (r *testWithdrawRepository) Create(userID int, orderID int64, sum int) error {
-	query := `INSERT INTO withdrawals (user_id,order_id, sum) VALUES ($1, $2, $3)`
-
-	row, err := r.mock.Exec(context.Background(), query, userID, orderID, sum)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == pgerrcode.UniqueViolation {
-				errWithMessage := "withdraw with orderID already exists"
-				return customerror.NewUniqueViolationError(errWithMessage)
-			}
-		}
-		return customerror.NewCommonPGError(err.Error())
-	}
-	if row.RowsAffected() == 0 {
-		err = errors.New("withdraw was not installed")
-		return customerror.NewCommonPGError(err.Error())
-	}
-	return nil
-}
-
-func (r *testWithdrawRepository) GetListByUserID(userID int) ([]models.Withdrawal, error) {
-	query := `SELECT order_id,user_id,sum,processed_at FROM withdrawals WHERE user_id = $1`
-	rows, err := r.mock.Query(context.Background(), query, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	withdrawals := []models.Withdrawal{}
-	for rows.Next() {
-		var withdrawal models.Withdrawal
-		var sumInKopecks int32
-		err = rows.Scan(&withdrawal.OrderID, &withdrawal.UserID, &sumInKopecks, &withdrawal.ProcessedAt)
-
-		if err != nil {
-			return nil, err
-		}
-
-		withdrawal.SetSumInFloat(sumInKopecks)
-		withdrawals = append(withdrawals, withdrawal)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-
-	return withdrawals, nil
 }

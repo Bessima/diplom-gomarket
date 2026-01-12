@@ -1,11 +1,9 @@
 package repository
 
 import (
-	"context"
 	"errors"
 	"testing"
 
-	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +16,8 @@ func TestUserRepository_CreateUser_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	username := "testuser"
 	passwordHash := "$2a$10$hashedpassword"
@@ -32,7 +31,7 @@ func TestUserRepository_CreateUser_Success(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	user, err := testRepo.CreateUser(username, passwordHash)
+	user, err := repo.CreateUser(username, passwordHash)
 
 	// Assert
 	assert.NoError(t, err)
@@ -49,7 +48,8 @@ func TestUserRepository_CreateUser_DatabaseError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	username := "testuser"
 	passwordHash := "$2a$10$hashedpassword"
@@ -60,11 +60,11 @@ func TestUserRepository_CreateUser_DatabaseError(t *testing.T) {
 		WillReturnError(expectedError)
 
 	// Act
-	user, err := testRepo.CreateUser(username, passwordHash)
+	user, err := repo.CreateUser(username, passwordHash)
 
 	// Assert
 	assert.Error(t, err)
-	require.NotNil(t, user) // Функция всегда возвращает указатель, даже при ошибке
+	assert.Nil(t, user) // Функция всегда возвращает указатель, даже при ошибке
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -74,7 +74,8 @@ func TestUserRepository_CreateUser_ScanError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	username := "testuser"
 	passwordHash := "$2a$10$hashedpassword"
@@ -88,11 +89,11 @@ func TestUserRepository_CreateUser_ScanError(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	user, err := testRepo.CreateUser(username, passwordHash)
+	user, err := repo.CreateUser(username, passwordHash)
 
 	// Assert
 	assert.Error(t, err)
-	require.NotNil(t, user)
+	assert.Nil(t, user)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -102,7 +103,8 @@ func TestUserRepository_GetUserByLogin_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	username := "testuser"
 	passwordHash := "$2a$10$hashedpassword"
@@ -116,7 +118,7 @@ func TestUserRepository_GetUserByLogin_Success(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	user, err := testRepo.GetUserByLogin(username)
+	user, err := repo.GetUserByLogin(username)
 
 	// Assert
 	assert.NoError(t, err)
@@ -133,7 +135,8 @@ func TestUserRepository_GetUserByLogin_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	username := "nonexistent"
 
@@ -142,11 +145,11 @@ func TestUserRepository_GetUserByLogin_NotFound(t *testing.T) {
 		WillReturnError(pgx.ErrNoRows)
 
 	// Act
-	user, err := testRepo.GetUserByLogin(username)
+	user, err := repo.GetUserByLogin(username)
 
 	// Assert
 	assert.Error(t, err)
-	require.NotNil(t, user)
+	assert.Nil(t, user)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -156,7 +159,8 @@ func TestUserRepository_GetUserByLogin_DatabaseError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	username := "testuser"
 	expectedError := errors.New("database connection error")
@@ -166,11 +170,11 @@ func TestUserRepository_GetUserByLogin_DatabaseError(t *testing.T) {
 		WillReturnError(expectedError)
 
 	// Act
-	user, err := testRepo.GetUserByLogin(username)
+	user, err := repo.GetUserByLogin(username)
 
 	// Assert
 	assert.Error(t, err)
-	require.NotNil(t, user)
+	assert.Nil(t, user)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -180,7 +184,8 @@ func TestUserRepository_GetUserByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	userID := 1
 	username := "testuser"
@@ -194,7 +199,7 @@ func TestUserRepository_GetUserByID_Success(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	user, err := testRepo.GetUserByID(userID)
+	user, err := repo.GetUserByID(userID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -211,7 +216,8 @@ func TestUserRepository_GetUserByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	userID := 999
 
@@ -220,11 +226,11 @@ func TestUserRepository_GetUserByID_NotFound(t *testing.T) {
 		WillReturnError(pgx.ErrNoRows)
 
 	// Act
-	user, err := testRepo.GetUserByID(userID)
+	user, err := repo.GetUserByID(userID)
 
 	// Assert
 	assert.Error(t, err)
-	require.NotNil(t, user)
+	assert.Nil(t, user)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -234,7 +240,8 @@ func TestUserRepository_GetUserByID_DatabaseError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testUserRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewUserRepository(dbObj)
 
 	userID := 1
 	expectedError := errors.New("database connection error")
@@ -244,11 +251,11 @@ func TestUserRepository_GetUserByID_DatabaseError(t *testing.T) {
 		WillReturnError(expectedError)
 
 	// Act
-	user, err := testRepo.GetUserByID(userID)
+	user, err := repo.GetUserByID(userID)
 
 	// Assert
 	assert.Error(t, err)
-	require.NotNil(t, user)
+	assert.Nil(t, user)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -286,7 +293,8 @@ func TestUserRepository_CreateUser_DifferentUsers(t *testing.T) {
 			require.NoError(t, err)
 			defer mock.Close()
 
-			testRepo := &testUserRepository{mock: mock}
+			dbObj := NewTestDB(mock)
+			repo := NewUserRepository(dbObj)
 
 			rows := pgxmock.NewRows([]string{"id", "name", "password"}).
 				AddRow(tc.userID, tc.username, tc.passwordHash)
@@ -296,7 +304,7 @@ func TestUserRepository_CreateUser_DifferentUsers(t *testing.T) {
 				WillReturnRows(rows)
 
 			// Act
-			user, err := testRepo.CreateUser(tc.username, tc.passwordHash)
+			user, err := repo.CreateUser(tc.username, tc.passwordHash)
 
 			// Assert
 			assert.NoError(t, err)
@@ -307,39 +315,4 @@ func TestUserRepository_CreateUser_DifferentUsers(t *testing.T) {
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
-}
-
-// testUserRepository - тестовая версия репозитория для работы с моками
-type testUserRepository struct {
-	mock pgxmock.PgxPoolIface
-}
-
-func (r *testUserRepository) CreateUser(username, passwordHash string) (*models.User, error) {
-	query := `INSERT INTO users (name, password) VALUES ($1, $2) RETURNING id, name, password`
-
-	row := r.mock.QueryRow(context.Background(), query, username, passwordHash)
-	if row == nil {
-		return nil, errors.New("user was not created")
-	}
-	user := models.User{}
-	err := row.Scan(&user.ID, &user.Login, &user.PasswordHash)
-	return &user, err
-}
-
-func (r *testUserRepository) GetUserByLogin(username string) (*models.User, error) {
-	query := `SELECT id, name, password FROM users WHERE name = $1`
-	row := r.mock.QueryRow(context.Background(), query, username)
-
-	elem := models.User{}
-	err := row.Scan(&elem.ID, &elem.Login, &elem.PasswordHash)
-	return &elem, err
-}
-
-func (r *testUserRepository) GetUserByID(id int) (*models.User, error) {
-	query := `SELECT id, name, password FROM users WHERE id = $1`
-	row := r.mock.QueryRow(context.Background(), query, id)
-
-	elem := models.User{}
-	err := row.Scan(&elem.ID, &elem.Login, &elem.PasswordHash)
-	return &elem, err
 }

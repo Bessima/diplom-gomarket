@@ -12,7 +12,7 @@ import (
 )
 
 type DB struct {
-	Pool *pgxpool.Pool
+	Pool PgxPoolInterface
 }
 
 func NewDB(ctx context.Context, dns string) (*DB, error) {

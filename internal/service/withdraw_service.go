@@ -8,13 +8,17 @@ import (
 	"sync"
 )
 
+type BalanceRepositoryI interface {
+	SetWithdrawForUserID(userID int, withdraw int) error
+}
+
 type WithdrawService struct {
-	BalanceRepository  *repository.BalanceRepository
+	BalanceRepository  BalanceRepositoryI
 	WithdrawRepository repository.WithdrawStorageRepositoryI
 	mu                 sync.Mutex
 }
 
-func NewWithdrawService(withdrawRep repository.WithdrawStorageRepositoryI, balanceRep *repository.BalanceRepository) *WithdrawService {
+func NewWithdrawService(withdrawRep repository.WithdrawStorageRepositoryI, balanceRep BalanceRepositoryI) *WithdrawService {
 	return &WithdrawService{BalanceRepository: balanceRep, WithdrawRepository: withdrawRep}
 }
 

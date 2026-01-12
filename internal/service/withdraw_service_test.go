@@ -25,11 +25,6 @@ func (m *MockWithdrawRepository) GetListByUserID(id int) ([]models.Withdrawal, e
 	return args.Get(0).([]models.Withdrawal), args.Error(1)
 }
 
-// BalanceRepositoryInterface - интерфейс для тестирования
-type BalanceRepositoryInterface interface {
-	SetWithdrawForUserID(userID int, withdraw int) error
-}
-
 // MockBalanceRepository - мок для BalanceRepository
 type MockBalanceRepository struct {
 	mock.Mock
@@ -40,47 +35,12 @@ func (m *MockBalanceRepository) SetWithdrawForUserID(userID int, withdraw int) e
 	return args.Error(0)
 }
 
-// TestWithdrawService - тестовая версия сервиса для тестов
-type TestWithdrawService struct {
-	service         *WithdrawService
-	mockBalanceRepo BalanceRepositoryInterface
-}
-
-func NewTestWithdrawService(withdrawRepo *MockWithdrawRepository, balanceRepo BalanceRepositoryInterface) *TestWithdrawService {
-	return &TestWithdrawService{
-		service: &WithdrawService{
-			WithdrawRepository: withdrawRepo,
-		},
-		mockBalanceRepo: balanceRepo,
-	}
-}
-
-// Set - тестовая реализация метода, которая использует моки
-func (ts *TestWithdrawService) Set(user *models.User, withdrawRequest schemas.WithdrawRequest) error {
-	ts.service.mu.Lock()
-	defer ts.service.mu.Unlock()
-
-	orderID, err := withdrawRequest.GetOrderAsInt()
-	if err != nil {
-		return errors.New("can't parse number of order")
-	}
-	withdrawInt := withdrawRequest.GetSumAsInt()
-	err = ts.service.WithdrawRepository.Create(user.ID, orderID, withdrawInt)
-	if err != nil {
-		return err
-	}
-
-	err = ts.mockBalanceRepo.SetWithdrawForUserID(user.ID, withdrawInt)
-
-	return err
-}
-
 func TestWithdrawService_Set_Success(t *testing.T) {
 	// Arrange
 	mockWithdrawRepo := new(MockWithdrawRepository)
 	mockBalanceRepo := new(MockBalanceRepository)
 
-	service := NewTestWithdrawService(mockWithdrawRepo, mockBalanceRepo)
+	service := NewWithdrawService(mockWithdrawRepo, mockBalanceRepo)
 
 	user := &models.User{
 		ID:    1,
@@ -113,7 +73,7 @@ func TestWithdrawService_Set_InvalidOrderNumber(t *testing.T) {
 	mockWithdrawRepo := new(MockWithdrawRepository)
 	mockBalanceRepo := new(MockBalanceRepository)
 
-	service := NewTestWithdrawService(mockWithdrawRepo, mockBalanceRepo)
+	service := NewWithdrawService(mockWithdrawRepo, mockBalanceRepo)
 
 	user := &models.User{
 		ID:    1,
@@ -141,7 +101,7 @@ func TestWithdrawService_Set_WithdrawRepositoryCreateError(t *testing.T) {
 	mockWithdrawRepo := new(MockWithdrawRepository)
 	mockBalanceRepo := new(MockBalanceRepository)
 
-	service := NewTestWithdrawService(mockWithdrawRepo, mockBalanceRepo)
+	service := NewWithdrawService(mockWithdrawRepo, mockBalanceRepo)
 
 	user := &models.User{
 		ID:    1,
@@ -176,7 +136,7 @@ func TestWithdrawService_Set_BalanceRepositoryError(t *testing.T) {
 	mockWithdrawRepo := new(MockWithdrawRepository)
 	mockBalanceRepo := new(MockBalanceRepository)
 
-	service := NewTestWithdrawService(mockWithdrawRepo, mockBalanceRepo)
+	service := NewWithdrawService(mockWithdrawRepo, mockBalanceRepo)
 
 	user := &models.User{
 		ID:    1,
@@ -245,7 +205,7 @@ func TestWithdrawService_Set_DifferentAmounts(t *testing.T) {
 			mockWithdrawRepo := new(MockWithdrawRepository)
 			mockBalanceRepo := new(MockBalanceRepository)
 
-			service := NewTestWithdrawService(mockWithdrawRepo, mockBalanceRepo)
+			service := NewWithdrawService(mockWithdrawRepo, mockBalanceRepo)
 
 			user := &models.User{
 				ID:    1,
@@ -279,7 +239,7 @@ func TestWithdrawService_Set_ConcurrentCalls(t *testing.T) {
 	mockWithdrawRepo := new(MockWithdrawRepository)
 	mockBalanceRepo := new(MockBalanceRepository)
 
-	service := NewTestWithdrawService(mockWithdrawRepo, mockBalanceRepo)
+	service := NewWithdrawService(mockWithdrawRepo, mockBalanceRepo)
 
 	user := &models.User{
 		ID:    1,

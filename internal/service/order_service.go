@@ -11,9 +11,15 @@ import (
 	"time"
 )
 
+type OrderRepositoryI interface {
+	UpdateStatus(orderID int, newStatus models.OrderStatus) error
+	SetAccrual(orderID, userID int, accrual int32) error
+	SetListForProcessing(ch chan models.Order) error
+}
+
 type OrderService struct {
-	repository    *repository.OrderRepository
-	accrualClient *accrual.AccrualClient
+	repository    OrderRepositoryI
+	accrualClient accrual.AccrualClientI
 }
 
 func NewOrderService(dbObj *db.DB, accrualAddress string) *OrderService {

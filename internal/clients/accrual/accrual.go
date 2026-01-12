@@ -21,6 +21,10 @@ type AccrualResponse struct {
 	Accrual float32 `json:"accrual,omitempty"`
 }
 
+type AccrualClientI interface {
+	Get(ctx context.Context, orderID int) (*AccrualResponse, error)
+}
+
 type AccrualClient struct {
 	httpClient *http.Client
 	address    string

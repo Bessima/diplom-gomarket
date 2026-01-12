@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -19,7 +18,8 @@ func TestOrderRepository_Create_Success(t *testing.T) {
 	defer mock.Close()
 
 	// Создаем репозиторий напрямую с моком, используя testOrderRepository
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	userID := 1
 	orderID := 12345
@@ -30,7 +30,7 @@ func TestOrderRepository_Create_Success(t *testing.T) {
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	// Act
-	err = testRepo.Create(userID, orderID)
+	err = repo.Create(userID, orderID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -43,7 +43,8 @@ func TestOrderRepository_Create_AlreadyExists(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	userID := 1
 	orderID := 12345
@@ -54,7 +55,7 @@ func TestOrderRepository_Create_AlreadyExists(t *testing.T) {
 		WillReturnResult(pgxmock.NewResult("INSERT", 0))
 
 	// Act
-	err = testRepo.Create(userID, orderID)
+	err = repo.Create(userID, orderID)
 
 	// Assert
 	assert.Error(t, err)
@@ -68,7 +69,8 @@ func TestOrderRepository_Create_DatabaseError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	userID := 1
 	orderID := 12345
@@ -79,7 +81,7 @@ func TestOrderRepository_Create_DatabaseError(t *testing.T) {
 		WillReturnError(expectedError)
 
 	// Act
-	err = testRepo.Create(userID, orderID)
+	err = repo.Create(userID, orderID)
 
 	// Assert
 	assert.Error(t, err)
@@ -92,7 +94,8 @@ func TestOrderRepository_GetByID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 12345
 	userID := 1
@@ -110,7 +113,7 @@ func TestOrderRepository_GetByID_Success(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	order, err := testRepo.GetByID(orderID)
+	order, err := repo.GetByID(orderID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -129,7 +132,8 @@ func TestOrderRepository_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 99999
 
@@ -138,11 +142,12 @@ func TestOrderRepository_GetByID_NotFound(t *testing.T) {
 		WillReturnError(pgx.ErrNoRows)
 
 	// Act
-	order, err := testRepo.GetByID(orderID)
+	order, err := repo.GetByID(orderID)
 
 	// Assert
 	assert.Error(t, err)
-	require.NotNil(t, order)
+	// При ошибке retry возвращает zero value (nil для указателя)
+	assert.Nil(t, order)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -152,7 +157,8 @@ func TestOrderRepository_GetListByUserID_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	userID := 1
 	accrual1 := int32(10050)
@@ -169,7 +175,7 @@ func TestOrderRepository_GetListByUserID_Success(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	orders, err := testRepo.GetListByUserID(userID)
+	orders, err := repo.GetListByUserID(userID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -196,7 +202,8 @@ func TestOrderRepository_GetListByUserID_Empty(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	userID := 999
 
@@ -207,7 +214,7 @@ func TestOrderRepository_GetListByUserID_Empty(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	orders, err := testRepo.GetListByUserID(userID)
+	orders, err := repo.GetListByUserID(userID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -221,7 +228,8 @@ func TestOrderRepository_GetListByUserID_WithNullAccrual(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	userID := 1
 
@@ -233,7 +241,7 @@ func TestOrderRepository_GetListByUserID_WithNullAccrual(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	orders, err := testRepo.GetListByUserID(userID)
+	orders, err := repo.GetListByUserID(userID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -250,7 +258,8 @@ func TestOrderRepository_GetListByUserID_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	userID := 1
 	expectedError := errors.New("query error")
@@ -260,7 +269,7 @@ func TestOrderRepository_GetListByUserID_QueryError(t *testing.T) {
 		WillReturnError(expectedError)
 
 	// Act
-	orders, err := testRepo.GetListByUserID(userID)
+	orders, err := repo.GetListByUserID(userID)
 
 	// Assert
 	assert.Error(t, err)
@@ -274,7 +283,8 @@ func TestOrderRepository_SetListForProcessing_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	rows := pgxmock.NewRows([]string{"id", "user_id", "accrual", "status"}).
 		AddRow(12345, 1, nil, models.NewStatus).
@@ -288,7 +298,7 @@ func TestOrderRepository_SetListForProcessing_Success(t *testing.T) {
 	defer close(ch)
 
 	// Act
-	err = testRepo.SetListForProcessing(ch)
+	err = repo.SetListForProcessing(ch)
 
 	// Assert
 	assert.NoError(t, err)
@@ -311,7 +321,8 @@ func TestOrderRepository_SetListForProcessing_QueryError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	expectedError := errors.New("query error")
 
@@ -323,7 +334,7 @@ func TestOrderRepository_SetListForProcessing_QueryError(t *testing.T) {
 	defer close(ch)
 
 	// Act
-	err = testRepo.SetListForProcessing(ch)
+	err = repo.SetListForProcessing(ch)
 
 	// Assert
 	assert.Error(t, err)
@@ -336,7 +347,8 @@ func TestOrderRepository_UpdateStatus_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 12345
 	newStatus := models.ProcessedStatus
@@ -346,7 +358,7 @@ func TestOrderRepository_UpdateStatus_Success(t *testing.T) {
 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	// Act
-	err = testRepo.UpdateStatus(orderID, newStatus)
+	err = repo.UpdateStatus(orderID, newStatus)
 
 	// Assert
 	assert.NoError(t, err)
@@ -359,7 +371,8 @@ func TestOrderRepository_UpdateStatus_OrderNotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 99999
 	newStatus := models.ProcessedStatus
@@ -369,11 +382,11 @@ func TestOrderRepository_UpdateStatus_OrderNotFound(t *testing.T) {
 		WillReturnResult(pgxmock.NewResult("UPDATE", 0))
 
 	// Act
-	err = testRepo.UpdateStatus(orderID, newStatus)
+	err = repo.UpdateStatus(orderID, newStatus)
 
 	// Assert
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "already exists")
+	assert.Contains(t, err.Error(), "not found")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -383,7 +396,8 @@ func TestOrderRepository_UpdateStatus_DatabaseError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 12345
 	newStatus := models.ProcessedStatus
@@ -394,7 +408,7 @@ func TestOrderRepository_UpdateStatus_DatabaseError(t *testing.T) {
 		WillReturnError(expectedError)
 
 	// Act
-	err = testRepo.UpdateStatus(orderID, newStatus)
+	err = repo.UpdateStatus(orderID, newStatus)
 
 	// Assert
 	assert.Error(t, err)
@@ -407,7 +421,8 @@ func TestOrderRepository_SetAccrual_Success(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 12345
 	userID := 1
@@ -430,7 +445,7 @@ func TestOrderRepository_SetAccrual_Success(t *testing.T) {
 	mock.ExpectCommit()
 
 	// Act
-	err = testRepo.SetAccrual(orderID, userID, accrual)
+	err = repo.SetAccrual(orderID, userID, accrual)
 
 	// Assert
 	assert.NoError(t, err)
@@ -443,7 +458,8 @@ func TestOrderRepository_SetAccrual_OrderNotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 99999
 	userID := 1
@@ -459,7 +475,7 @@ func TestOrderRepository_SetAccrual_OrderNotFound(t *testing.T) {
 	mock.ExpectRollback()
 
 	// Act
-	err = testRepo.SetAccrual(orderID, userID, accrual)
+	err = repo.SetAccrual(orderID, userID, accrual)
 
 	// Assert
 	assert.Error(t, err)
@@ -473,7 +489,8 @@ func TestOrderRepository_SetAccrual_BalanceUpdateError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 12345
 	userID := 1
@@ -493,7 +510,7 @@ func TestOrderRepository_SetAccrual_BalanceUpdateError(t *testing.T) {
 	mock.ExpectRollback()
 
 	// Act
-	err = testRepo.SetAccrual(orderID, userID, accrual)
+	err = repo.SetAccrual(orderID, userID, accrual)
 
 	// Assert
 	assert.Error(t, err)
@@ -506,7 +523,8 @@ func TestOrderRepository_SetAccrual_TransactionBeginError(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	testRepo := &testOrderRepository{mock: mock}
+	dbObj := NewTestDB(mock)
+	repo := NewOrderRepository(dbObj)
 
 	orderID := 12345
 	userID := 1
@@ -516,7 +534,7 @@ func TestOrderRepository_SetAccrual_TransactionBeginError(t *testing.T) {
 	mock.ExpectBegin().WillReturnError(expectedError)
 
 	// Act
-	err = testRepo.SetAccrual(orderID, userID, accrual)
+	err = repo.SetAccrual(orderID, userID, accrual)
 
 	// Assert
 	assert.Error(t, err)
@@ -554,14 +572,15 @@ func TestOrderRepository_Create_WithDifferentOrderIDs(t *testing.T) {
 			require.NoError(t, err)
 			defer mock.Close()
 
-			testRepo := &testOrderRepository{mock: mock}
+			dbObj := NewTestDB(mock)
+			repo := NewOrderRepository(dbObj)
 
 			mock.ExpectExec("INSERT INTO orders").
 				WithArgs(tc.orderID, tc.userID, models.NewStatus).
 				WillReturnResult(pgxmock.NewResult("INSERT", tc.affected))
 
 			// Act
-			err = testRepo.Create(tc.userID, tc.orderID)
+			err = repo.Create(tc.userID, tc.orderID)
 
 			// Assert
 			if tc.wantErr {
@@ -590,7 +609,8 @@ func TestOrderRepository_UpdateStatus_AllStatuses(t *testing.T) {
 			require.NoError(t, err)
 			defer mock.Close()
 
-			testRepo := &testOrderRepository{mock: mock}
+			dbObj := NewTestDB(mock)
+			repo := NewOrderRepository(dbObj)
 
 			orderID := 12345
 
@@ -599,142 +619,11 @@ func TestOrderRepository_UpdateStatus_AllStatuses(t *testing.T) {
 				WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 			// Act
-			err = testRepo.UpdateStatus(orderID, status)
+			err = repo.UpdateStatus(orderID, status)
 
 			// Assert
 			assert.NoError(t, err)
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
-}
-
-// testOrderRepository - тестовая версия репозитория для работы с моками
-type testOrderRepository struct {
-	mock pgxmock.PgxPoolIface
-}
-
-func (r *testOrderRepository) Create(userID, orderID int) error {
-	query := `INSERT INTO orders (id, user_id, status) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING`
-	row, err := r.mock.Exec(context.Background(), query, orderID, userID, models.NewStatus)
-	if err != nil {
-		return err
-	}
-	if row.RowsAffected() == 0 {
-		return errors.New("order with id already exists")
-	}
-	return nil
-}
-
-func (r *testOrderRepository) GetByID(id int) (*models.Order, error) {
-	query := `SELECT id,user_id,accrual,status FROM orders WHERE id = $1`
-	row := r.mock.QueryRow(context.Background(), query, id)
-
-	elem := models.Order{}
-	var accrualInKopecks *int32
-	err := row.Scan(&elem.ID, &elem.UserID, &accrualInKopecks, &elem.Status)
-	if err != nil {
-		return &elem, err
-	}
-
-	if accrualInKopecks != nil {
-		elem.SetAccrualAsFloat(*accrualInKopecks)
-	}
-
-	return &elem, nil
-}
-
-func (r *testOrderRepository) GetListByUserID(userID int) ([]models.Order, error) {
-	query := `SELECT id,user_id,accrual,status FROM orders WHERE user_id = $1`
-	rows, err := r.mock.Query(context.Background(), query, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	orders := []models.Order{}
-	for rows.Next() {
-		var order models.Order
-		var accrualInKopecks *int32
-		err = rows.Scan(&order.ID, &order.UserID, &accrualInKopecks, &order.Status)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if accrualInKopecks != nil {
-			order.SetAccrualAsFloat(*accrualInKopecks)
-		}
-
-		orders = append(orders, order)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-
-	return orders, nil
-}
-
-func (r *testOrderRepository) SetListForProcessing(ch chan models.Order) error {
-	query := `SELECT id,user_id,accrual,status FROM orders WHERE status IN ($1, $2)`
-	rows, err := r.mock.Query(context.Background(), query, models.NewStatus, models.ProcessingStatus)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	var order models.Order
-	for rows.Next() {
-		err = rows.Scan(&order.ID, &order.UserID, &order.Accrual, &order.Status)
-		if err != nil {
-			return err
-		}
-		ch <- order
-	}
-
-	return rows.Err()
-}
-
-func (r *testOrderRepository) UpdateStatus(orderID int, newStatus models.OrderStatus) error {
-	query := `UPDATE orders SET status = $1 WHERE id = $2`
-	row, err := r.mock.Exec(context.Background(), query, newStatus, orderID)
-	if row.RowsAffected() == 0 {
-		return errors.New("order with id already exists")
-	}
-	return err
-}
-
-func (r *testOrderRepository) SetAccrual(orderID, userID int, accrual int32) error {
-	ctx := context.Background()
-
-	queryOrder := `UPDATE orders SET accrual = $1, status = $2 WHERE id = $3`
-
-	tx, err := r.mock.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback(ctx)
-		}
-	}()
-
-	row, err := tx.Exec(ctx, queryOrder, accrual, models.ProcessedStatus, orderID)
-	if err == nil && row.RowsAffected() == 0 {
-		err = errors.New("order with id was not installed accrual value")
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	// Имитируем вызов балансового репозитория
-	queryBalance := `INSERT INTO balance (user_id, current) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET current = balance.current + EXCLUDED.current`
-	_, err = tx.Exec(ctx, queryBalance, userID, accrual)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
 }
