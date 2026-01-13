@@ -27,7 +27,7 @@ func TestNewAccrualClient(t *testing.T) {
 func TestAccrualClient_Get_Success(t *testing.T) {
 	testCases := []struct {
 		name            string
-		orderNumber     int
+		orderNumber     string
 		expectedStatus  string
 		expectedAccrual float32
 		mockResponse    AccrualResponse
@@ -35,7 +35,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 	}{
 		{
 			name:            "registered order",
-			orderNumber:     123456,
+			orderNumber:     "123456",
 			expectedStatus:  "REGISTERED",
 			expectedAccrual: 0,
 			mockResponse:    AccrualResponse{Order: "123456", Status: "REGISTERED"},
@@ -43,7 +43,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 		},
 		{
 			name:            "processing order",
-			orderNumber:     789012,
+			orderNumber:     "789012",
 			expectedStatus:  "PROCESSING",
 			expectedAccrual: 0,
 			mockResponse:    AccrualResponse{Order: "789012", Status: "PROCESSING"},
@@ -51,7 +51,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 		},
 		{
 			name:            "processed order with accrual",
-			orderNumber:     345678,
+			orderNumber:     "345678",
 			expectedStatus:  "PROCESSED",
 			expectedAccrual: 500.5,
 			mockResponse:    AccrualResponse{Order: "345678", Status: "PROCESSED", Accrual: 500.5},
@@ -59,7 +59,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 		},
 		{
 			name:            "invalid order",
-			orderNumber:     999999,
+			orderNumber:     "999999",
 			expectedStatus:  "INVALID",
 			expectedAccrual: 0,
 			mockResponse:    AccrualResponse{Order: "999999", Status: "INVALID"},
@@ -74,7 +74,7 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 			// Создаем тестовый сервер
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
-				assert.Equal(t, fmt.Sprintf("/api/orders/%d", tc.orderNumber), r.URL.Path)
+				assert.Equal(t, fmt.Sprintf("/api/orders/%s", tc.orderNumber), r.URL.Path)
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tc.statusCode)
@@ -102,25 +102,25 @@ func TestAccrualClient_Get_Success(t *testing.T) {
 func TestAccrualClient_Get_HTTPErrors(t *testing.T) {
 	testCases := []struct {
 		name        string
-		orderNumber int
+		orderNumber string
 		statusCode  int
 		expectError bool
 	}{
 		{
 			name:        "order not found",
-			orderNumber: 111111,
+			orderNumber: "111111",
 			statusCode:  http.StatusNoContent,
 			expectError: true,
 		},
 		{
 			name:        "too many requests",
-			orderNumber: 222222,
+			orderNumber: "222222",
 			statusCode:  http.StatusTooManyRequests,
 			expectError: true,
 		},
 		{
 			name:        "internal server error",
-			orderNumber: 333333,
+			orderNumber: "333333",
 			statusCode:  http.StatusInternalServerError,
 			expectError: true,
 		},
@@ -152,7 +152,7 @@ func TestAccrualClient_Get_NetworkError(t *testing.T) {
 	// Используем несуществующий адрес для имитации сетевой ошибки
 	client := NewAccrualClient("http://localhost:99999")
 
-	response, err := client.Get(context.Background(), 123456)
+	response, err := client.Get(context.Background(), "123456")
 
 	assert.Error(t, err)
 	assert.Nil(t, response)
@@ -169,7 +169,7 @@ func TestAccrualClient_Get_InvalidJSON(t *testing.T) {
 
 	client := NewAccrualClient(server.URL)
 
-	resp, err := client.Get(context.Background(), 123456)
+	resp, err := client.Get(context.Background(), "123456")
 	assert.Error(t, err)
 	assert.Nil(t, resp)
 }
@@ -191,7 +191,7 @@ func TestAccrualClient_Get_ReadBodyError(t *testing.T) {
 
 	client := NewAccrualClient(server.URL)
 
-	resp, err := client.Get(context.Background(), 123456)
+	resp, err := client.Get(context.Background(), "123456")
 	assert.Error(t, err)
 	assert.Nil(t, resp)
 }
@@ -218,7 +218,7 @@ func TestAccrualClient_Get_ResponseBodyCloseError(t *testing.T) {
 					io.Reader
 					io.Closer
 				}{
-					Reader: io.NopCloser(strings.NewReader(`{"order":123456,"status":"PROCESSING"}`)),
+					Reader: io.NopCloser(strings.NewReader(`{"order":"123456","status":"PROCESSING"}`)),
 					Closer: closeFunc(func() error {
 						return errors.New("close error")
 					}),
@@ -231,11 +231,11 @@ func TestAccrualClient_Get_ResponseBodyCloseError(t *testing.T) {
 	}
 
 	// Метод должен отработать несмотря на ошибку закрытия (она только логируется)
-	response, err := client.Get(context.Background(), 123456)
+	response, err := client.Get(context.Background(), "123456")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
-	assert.Equal(t, 123456, response.Order)
+	assert.Equal(t, "123456", response.Order)
 	assert.Equal(t, "PROCESSING", response.Status)
 }
 
@@ -269,11 +269,11 @@ func TestAccrualClient_Get_URLFormat(t *testing.T) {
 	defer server.Close()
 
 	client := NewAccrualClient(server.URL)
-	response, err := client.Get(context.Background(), 1234567890)
+	response, err := client.Get(context.Background(), "1234567890")
 
 	require.NoError(t, err)
 	require.NotNil(t, response)
-	assert.Equal(t, 1234567890, response.Order)
+	assert.Equal(t, "1234567890", response.Order)
 	assert.Equal(t, "PROCESSED", response.Status)
 	assert.Equal(t, float32(1000), response.Accrual)
 }
