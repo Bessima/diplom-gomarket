@@ -19,7 +19,7 @@ import (
 type contextKey string
 
 const (
-	UserContextKey contextKey = "user"
+	userContextKey contextKey = "user"
 )
 
 type Claims struct {
@@ -330,10 +330,13 @@ func (h *AuthHandler) setTokensInCookies(w http.ResponseWriter, accessToken, ref
 	})
 }
 
-// GetUserFromContext извлекает пользователя из контекста
 func GetUserFromContext(ctx context.Context) *models.User {
-	if user, ok := ctx.Value(UserContextKey).(*models.User); ok {
+	if user, ok := ctx.Value(userContextKey).(*models.User); ok {
 		return user
 	}
 	return nil
+}
+
+func SetUserInContext(request *http.Request, user *models.User) context.Context {
+	return context.WithValue(request.Context(), userContextKey, user)
 }
