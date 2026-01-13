@@ -11,14 +11,8 @@ import (
 	"time"
 )
 
-type OrderRepositoryI interface {
-	UpdateStatus(orderID int, newStatus models.OrderStatus) error
-	SetAccrual(orderID, userID int, accrual int32) error
-	SetListForProcessing(ch chan models.Order) error
-}
-
 type OrderService struct {
-	repository    OrderRepositoryI
+	repository    repository.OrderStorageRepositoryI
 	accrualClient accrual.AccrualClientI
 }
 
@@ -42,18 +36,18 @@ func (service OrderService) GetAccrualForOrder(ctx context.Context, ordersForPro
 		}
 		switch newStatus := models.OrderStatus(resp.Status); newStatus {
 		case models.InvalidStatus:
-			logger.Log.Info(fmt.Sprintf("Order %d has invalid status", order.ID))
+			logger.Log.Info(fmt.Sprintf("Order %s has invalid status", order.ID))
 			err = service.repository.UpdateStatus(order.ID, newStatus)
 			if err != nil {
 				logger.Log.Warn(err.Error())
 			}
 			continue
 		case models.ProcessedStatus:
-			logger.Log.Info(fmt.Sprintf("Order %d has already processed status", order.ID))
+			logger.Log.Info(fmt.Sprintf("Order %s has already processed status", order.ID))
 			accrualInt := int32(resp.Accrual * 100)
 			err = service.repository.SetAccrual(order.ID, order.UserID, accrualInt)
 			if err != nil {
-				logger.Log.Warn(fmt.Sprintf("Order %d was not saved in DB, %s", order.ID, err.Error()))
+				logger.Log.Warn(fmt.Sprintf("Order %s was not saved in DB, %s", order.ID, err.Error()))
 				ordersForProcessing <- order
 				continue
 			}

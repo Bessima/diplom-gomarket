@@ -22,7 +22,7 @@ type AccrualResponse struct {
 }
 
 type AccrualClientI interface {
-	Get(ctx context.Context, orderID int) (*AccrualResponse, error)
+	Get(ctx context.Context, orderID string) (*AccrualResponse, error)
 }
 
 type AccrualClient struct {
@@ -35,8 +35,8 @@ func NewAccrualClient(address string) *AccrualClient {
 	return &client
 }
 
-func (client AccrualClient) Get(ctx context.Context, orderNumber int) (*AccrualResponse, error) {
-	url := fmt.Sprintf("%s/api/orders/%d", client.address, orderNumber)
+func (client AccrualClient) Get(ctx context.Context, orderNumber string) (*AccrualResponse, error) {
+	url := fmt.Sprintf("%s/api/orders/%s", client.address, orderNumber)
 
 	return retry.DoRetryWithResult(ctx, func() (*AccrualResponse, error) {
 		response, err := client.httpClient.Get(url)

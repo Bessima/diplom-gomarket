@@ -6,6 +6,7 @@ import (
 	"github.com/Bessima/diplom-gomarket/internal/config/db"
 	"github.com/Bessima/diplom-gomarket/internal/models"
 	"github.com/Bessima/diplom-gomarket/internal/retry"
+	"strconv"
 )
 
 type OrderRepository struct {
@@ -16,6 +17,9 @@ type OrderStorageRepositoryI interface {
 	Create(userID, orderID int) error
 	GetByID(id int) (*models.Order, error)
 	GetListByUserID(userID int) ([]models.Order, error)
+	UpdateStatus(orderID string, newStatus models.OrderStatus) error
+	SetAccrual(orderID string, userID int, accrual int32) error
+	SetListForProcessing(ch chan models.Order) error
 }
 
 func NewOrderRepository(dbObj *db.DB) *OrderRepository {
@@ -48,20 +52,22 @@ func (repository *OrderRepository) GetByID(id int) (*models.Order, error) {
 
 		elem := models.Order{}
 		var accrualInKopecks *int32
-		err := row.Scan(&elem.ID, &elem.UserID, &accrualInKopecks, &elem.Status)
+		var number int
+		err := row.Scan(&number, &elem.UserID, &accrualInKopecks, &elem.Status)
 		if err != nil {
 			return &elem, err
 		}
 		if accrualInKopecks != nil {
 			elem.SetAccrualAsFloat(*accrualInKopecks)
 		}
+		elem.ID = strconv.Itoa(number)
 
 		return &elem, err
 	})
 }
 
 func (repository *OrderRepository) GetListByUserID(userID int) ([]models.Order, error) {
-	query := `SELECT id,user_id,accrual,status FROM orders WHERE user_id = $1`
+	query := `SELECT id,user_id,accrual,status,uploaded_at FROM orders WHERE user_id = $1 ORDER BY uploaded_at DESC`
 	return retry.DoRetryWithResult(context.Background(), func() ([]models.Order, error) {
 		rows, err := repository.db.Pool.Query(
 			context.Background(),
@@ -77,7 +83,7 @@ func (repository *OrderRepository) GetListByUserID(userID int) ([]models.Order, 
 		for rows.Next() {
 			var order models.Order
 			var accrualInKopecks *int32
-			err = rows.Scan(&order.ID, &order.UserID, &accrualInKopecks, &order.Status)
+			err = rows.Scan(&order.ID, &order.UserID, &accrualInKopecks, &order.Status, &order.UploadedAt)
 
 			if err != nil {
 				return nil, err
@@ -134,7 +140,7 @@ func (repository *OrderRepository) SetListForProcessing(ch chan models.Order) er
 	})
 }
 
-func (repository *OrderRepository) UpdateStatus(orderID int, newStatus models.OrderStatus) error {
+func (repository *OrderRepository) UpdateStatus(orderID string, newStatus models.OrderStatus) error {
 	query := `UPDATE orders SET status = $1 WHERE id = $2`
 	return retry.DoRetry(context.Background(), func() error {
 
@@ -152,7 +158,7 @@ func (repository *OrderRepository) UpdateStatus(orderID int, newStatus models.Or
 	})
 }
 
-func (repository *OrderRepository) SetAccrual(orderID, userID int, accrual int32) error {
+func (repository *OrderRepository) SetAccrual(orderID string, userID int, accrual int32) error {
 	ctx := context.Background()
 
 	queryOrder := `UPDATE orders SET accrual = $1, status = $2 WHERE id = $3`

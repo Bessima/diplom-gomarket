@@ -1,16 +1,16 @@
 package models
 
 type Balance struct {
-	UserID      int     `json:"-"`
-	Current     float32 `json:"current"`
-	Withdrawing float32 `json:"withdrawing"`
+	UserID    int     `json:"-"`
+	Current   float32 `json:"current"`
+	Withdrawn float32 `json:"withdrawn"`
 }
 
 func NewBalance(userID int) Balance {
 	return Balance{
-		UserID:      userID,
-		Current:     0,
-		Withdrawing: 0,
+		UserID:    userID,
+		Current:   0,
+		Withdrawn: 0,
 	}
 }
 
@@ -19,7 +19,7 @@ func (balance *Balance) SetCurrent(value int32) {
 	balance.Current = current
 }
 
-func (balance *Balance) SetWithdrawing(value int32) {
-	withdrawing := float32(value) / 100
-	balance.Withdrawing = withdrawing
+func (balance *Balance) SetWithdrawn(value int32) {
+	withdrawn := float32(value) / 100
+	balance.Withdrawn = withdrawn
 }

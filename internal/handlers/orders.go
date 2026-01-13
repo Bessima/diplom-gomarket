@@ -75,7 +75,7 @@ func (h *OrdersHandler) Add(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Warn(fmt.Sprintf("order was not created, error: %v", err))
 		return
 	}
-	h.ordersForProcessing <- models.Order{ID: orderID, UserID: user.ID, Status: models.NewStatus}
+	h.ordersForProcessing <- models.Order{ID: bodyString, UserID: user.ID, Status: models.NewStatus}
 
 	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("Order added successfully!"))
@@ -96,12 +96,12 @@ func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(orders)
 	if err != nil {
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		logger.Log.Error(fmt.Sprintf("Error encoding response: %v", err))
 	}
-	w.WriteHeader(http.StatusOK)
 
 }
 
@@ -123,10 +123,10 @@ func (h *OrdersHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(balance)
 	if err != nil {
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		logger.Log.Error(fmt.Sprintf("Error encoding response: %v", err))
 	}
-	w.WriteHeader(http.StatusOK)
 }

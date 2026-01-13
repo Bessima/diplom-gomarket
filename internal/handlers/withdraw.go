@@ -83,8 +83,8 @@ func (h *WithdrawHandler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte("Withdraw successfully added!"))
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Withdraw successfully added!"))
 
 }
 
@@ -102,11 +102,21 @@ func (h *WithdrawHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Error(fmt.Sprintf("withdrawals were not found, error: %v", err))
 		return
 	}
+	//err = json.NewEncoder(w).Encode(withdrawals)
+	// Конвертируем в правильный формат ответа
+	//response := make([]schemas.WithdrawResponse, 0, len(withdrawals))
+	//for _, w := range withdrawals {
+	//	response = append(response, schemas.WithdrawResponse{
+	//		Order:       fmt.Sprintf("%d", w.OrderID),
+	//		Sum:         w.Sum,
+	//		ProcessedAt: w.ProcessedAt,
+	//	})
+	//}
 
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(withdrawals)
 	if err != nil {
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		logger.Log.Error(fmt.Sprintf("Error encoding response: %v", err))
 	}
-	w.WriteHeader(http.StatusOK)
 }

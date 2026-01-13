@@ -41,7 +41,7 @@ func (repository *BalanceRepository) GetBalanceUserID(userID int) (models.Balanc
 		}
 
 		balance.SetCurrent(Sum)
-		balance.SetWithdrawing(Withdrawing)
+		balance.SetWithdrawn(Withdrawing)
 
 		return balance, err
 	})
@@ -69,7 +69,7 @@ func (repository *BalanceRepository) SetWithdrawForUserID(userID int, withdraw i
 	})
 }
 
-func (repository *BalanceRepository) SetAccrual(tx pgx.Tx, orderID, userID int, accrual int32) error {
+func (repository *BalanceRepository) SetAccrual(tx pgx.Tx, orderID string, userID int, accrual int32) error {
 	queryBalance := `INSERT INTO balance (user_id, current) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET current = balance.current + EXCLUDED.current`
 
 	rowBalance, err := tx.Exec(

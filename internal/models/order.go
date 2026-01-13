@@ -3,8 +3,8 @@ package models
 import "time"
 
 type Order struct {
-	ID         int         `json:"id"`
-	UserID     int         `json:"user_id"`
+	ID         string      `json:"number"`
+	UserID     int         `json:"-"`
 	Accrual    *float32    `json:"accrual,omitempty"`
 	Status     OrderStatus `json:"status"`
 	UploadedAt time.Time   `json:"uploaded_at"`

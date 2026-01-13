@@ -37,7 +37,7 @@ func TestBalanceRepository_GetBalanceUserID_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, userID, balance.UserID)
 	assert.Equal(t, float32(500.00), balance.Current)
-	assert.Equal(t, float32(100.50), balance.Withdrawing)
+	assert.Equal(t, float32(100.50), balance.Withdrawn)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -64,7 +64,7 @@ func TestBalanceRepository_GetBalanceUserID_NoRows(t *testing.T) {
 	assert.NoError(t, err) // Метод возвращает пустой баланс без ошибки
 	assert.Equal(t, userID, balance.UserID)
 	assert.Equal(t, float32(0), balance.Current)
-	assert.Equal(t, float32(0), balance.Withdrawing)
+	assert.Equal(t, float32(0), balance.Withdrawn)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -121,7 +121,7 @@ func TestBalanceRepository_GetBalanceUserID_ZeroBalance(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, userID, balance.UserID)
 	assert.Equal(t, float32(0), balance.Current)
-	assert.Equal(t, float32(0), balance.Withdrawing)
+	assert.Equal(t, float32(0), balance.Withdrawn)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -209,7 +209,7 @@ func TestBalanceRepository_SetAccrual_Success(t *testing.T) {
 	dbObj := NewTestDB(mock)
 	repo := NewBalanceRepository(dbObj)
 
-	orderID := 12345
+	orderID := "12345"
 	userID := 1
 	accrual := int32(50000)
 
@@ -240,7 +240,7 @@ func TestBalanceRepository_SetAccrual_NoRowsAffected(t *testing.T) {
 	dbObj := NewTestDB(mock)
 	repo := NewBalanceRepository(dbObj)
 
-	orderID := 12345
+	orderID := "12345"
 	userID := 1
 	accrual := int32(50000)
 
@@ -271,7 +271,7 @@ func TestBalanceRepository_SetAccrual_DatabaseError(t *testing.T) {
 	dbObj := NewTestDB(mock)
 	repo := NewBalanceRepository(dbObj)
 
-	orderID := 12345
+	orderID := "12345"
 	userID := 1
 	accrual := int32(50000)
 	expectedError := errors.New("database error")

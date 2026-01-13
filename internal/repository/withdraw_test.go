@@ -141,8 +141,8 @@ func TestWithdrawRepository_GetListByUserID_Success(t *testing.T) {
 	now := time.Now()
 
 	rows := pgxmock.NewRows([]string{"order_id", "user_id", "sum", "processed_at"}).
-		AddRow(12345, userID, int32(10000), now).
-		AddRow(67890, userID, int32(25050), now.Add(-time.Hour))
+		AddRow("12345", userID, int32(10000), now).
+		AddRow("67890", userID, int32(25050), now.Add(-time.Hour))
 
 	mock.ExpectQuery("SELECT order_id,user_id,sum,processed_at FROM withdrawals WHERE user_id").
 		WithArgs(userID).
@@ -155,12 +155,12 @@ func TestWithdrawRepository_GetListByUserID_Success(t *testing.T) {
 	assert.NoError(t, err)
 	require.Len(t, withdrawals, 2)
 
-	assert.Equal(t, 12345, withdrawals[0].OrderID)
+	assert.Equal(t, "12345", withdrawals[0].OrderID)
 	assert.Equal(t, userID, withdrawals[0].UserID)
 	assert.Equal(t, float32(100.00), withdrawals[0].Sum)
 	assert.Equal(t, now.Unix(), withdrawals[0].ProcessedAt.Unix())
 
-	assert.Equal(t, 67890, withdrawals[1].OrderID)
+	assert.Equal(t, "67890", withdrawals[1].OrderID)
 	assert.Equal(t, userID, withdrawals[1].UserID)
 	assert.Equal(t, float32(250.50), withdrawals[1].Sum)
 
@@ -303,7 +303,7 @@ func TestWithdrawRepository_GetListByUserID_MultipleUsers(t *testing.T) {
 		name        string
 		userID      int
 		withdrawals []struct {
-			orderID int
+			orderID string
 			sum     int32
 		}
 	}{
@@ -311,22 +311,22 @@ func TestWithdrawRepository_GetListByUserID_MultipleUsers(t *testing.T) {
 			name:   "user with one withdrawal",
 			userID: 1,
 			withdrawals: []struct {
-				orderID int
+				orderID string
 				sum     int32
 			}{
-				{orderID: 12345, sum: 10000},
+				{orderID: "12345", sum: 10000},
 			},
 		},
 		{
 			name:   "user with multiple withdrawals",
 			userID: 2,
 			withdrawals: []struct {
-				orderID int
+				orderID string
 				sum     int32
 			}{
-				{orderID: 11111, sum: 5000},
-				{orderID: 22222, sum: 15000},
-				{orderID: 33333, sum: 25000},
+				{orderID: "11111", sum: 5000},
+				{orderID: "22222", sum: 15000},
+				{orderID: "33333", sum: 25000},
 			},
 		},
 	}

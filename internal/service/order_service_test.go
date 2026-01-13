@@ -40,12 +40,12 @@ func (m *MockOrderRepository) SetListForProcessing(ch chan models.Order) error {
 	return args.Error(0)
 }
 
-func (m *MockOrderRepository) UpdateStatus(orderID int, newStatus models.OrderStatus) error {
+func (m *MockOrderRepository) UpdateStatus(orderID string, newStatus models.OrderStatus) error {
 	args := m.Called(orderID, newStatus)
 	return args.Error(0)
 }
 
-func (m *MockOrderRepository) SetAccrual(orderID, userID int, accrual int32) error {
+func (m *MockOrderRepository) SetAccrual(orderID string, userID int, accrual int32) error {
 	args := m.Called(orderID, userID, accrual)
 	return args.Error(0)
 }
@@ -55,7 +55,7 @@ type MockAccrualClient struct {
 	mock.Mock
 }
 
-func (m *MockAccrualClient) Get(ctx context.Context, orderID int) (*accrual.AccrualResponse, error) {
+func (m *MockAccrualClient) Get(ctx context.Context, orderID string) (*accrual.AccrualResponse, error) {
 	args := m.Called(ctx, orderID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -77,7 +77,7 @@ func TestOrderService_GetAccrualForOrder_ProcessedStatus(t *testing.T) {
 	ordersChannel := make(chan models.Order, 10)
 
 	order := models.Order{
-		ID:      12345,
+		ID:      "12345",
 		UserID:  1,
 		Status:  models.NewStatus,
 		Accrual: nil,
@@ -121,7 +121,7 @@ func TestOrderService_GetAccrualForOrder_InvalidStatus(t *testing.T) {
 	ordersChannel := make(chan models.Order, 10)
 
 	order := models.Order{
-		ID:      12345,
+		ID:      "12345",
 		UserID:  1,
 		Status:  models.NewStatus,
 		Accrual: nil,
@@ -163,7 +163,7 @@ func TestOrderService_GetAccrualForOrder_ProcessingStatus(t *testing.T) {
 	ordersChannel := make(chan models.Order, 10)
 
 	order := models.Order{
-		ID:      12345,
+		ID:      "12345",
 		UserID:  1,
 		Status:  models.NewStatus,
 		Accrual: nil,
@@ -227,7 +227,7 @@ func TestOrderService_GetAccrualForOrder_AccrualClientError(t *testing.T) {
 	ordersChannel := make(chan models.Order, 10)
 
 	order := models.Order{
-		ID:      12345,
+		ID:      "12345",
 		UserID:  1,
 		Status:  models.NewStatus,
 		Accrual: nil,
@@ -289,7 +289,7 @@ func TestOrderService_GetAccrualForOrder_SetAccrualError(t *testing.T) {
 	ordersChannel := make(chan models.Order, 10)
 
 	order := models.Order{
-		ID:      12345,
+		ID:      "12345",
 		UserID:  1,
 		Status:  models.NewStatus,
 		Accrual: nil,
@@ -402,7 +402,7 @@ func TestOrderService_GetAccrualForOrder_UpdateStatusError(t *testing.T) {
 	ordersChannel := make(chan models.Order, 10)
 
 	order := models.Order{
-		ID:      12345,
+		ID:      "12345",
 		UserID:  1,
 		Status:  models.NewStatus,
 		Accrual: nil,
