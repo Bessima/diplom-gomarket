@@ -1,0 +1,83 @@
+package server
+
+import (
+	"context"
+	"github.com/Bessima/diplom-gomarket/internal/config/db"
+	"github.com/Bessima/diplom-gomarket/internal/handlers"
+	middleware "github.com/Bessima/diplom-gomarket/internal/middlewares"
+	"github.com/Bessima/diplom-gomarket/internal/middlewares/logger"
+	"github.com/Bessima/diplom-gomarket/internal/models"
+	"github.com/Bessima/diplom-gomarket/internal/repository"
+	"github.com/go-chi/chi/v5"
+	"net"
+	"net/http"
+	"time"
+)
+
+type ServerService struct {
+	Server *http.Server
+	db     *db.DB
+}
+
+func NewServerService(rootContext context.Context, address string, db *db.DB) ServerService {
+	server := &http.Server{
+		Addr: address,
+		BaseContext: func(_ net.Listener) context.Context {
+			return rootContext
+		},
+	}
+	return ServerService{Server: server, db: db}
+}
+
+func (serverService *ServerService) SetRouter(jwtConfig *handlers.JWTConfig, ordersForProcessing chan models.Order) {
+	serverService.Server.Handler = serverService.getRouter(jwtConfig, ordersForProcessing)
+}
+
+func (serverService *ServerService) getRouter(jwtConfig *handlers.JWTConfig, ordersForProcessing chan models.Order) chi.Router {
+	router := chi.NewRouter()
+
+	router.Use(logger.RequestLogger)
+	//router.Use(compress.GZIPMiddleware)
+
+	userRepository := repository.NewUserRepository(serverService.db)
+	orderRepository := repository.NewOrderRepository(serverService.db)
+	withdrawalRepository := repository.NewWithdrawRepository(serverService.db)
+	balanceRepository := repository.NewBalanceRepository(serverService.db)
+
+	authHandler := handlers.NewAuthHandler(jwtConfig, userRepository)
+	router.Post("/api/user/register", authHandler.RegisterHandler)
+	router.Post("/api/user/login", authHandler.LoginHandler)
+	router.Post("/api/user/refresh", authHandler.RefreshHandler)
+
+	orderHandler := handlers.NewOrderHandler(orderRepository, balanceRepository, ordersForProcessing)
+	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/logout", authHandler.LogoutHandler)
+	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/orders", orderHandler.Add)
+	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/orders", orderHandler.GetOrders)
+	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/balance", orderHandler.GetBalance)
+
+	withdrawalHandler := handlers.NewWithdrawHandler(withdrawalRepository, orderRepository, balanceRepository)
+	router.With(middleware.AuthMiddleware(authHandler)).Post("/api/user/balance/withdraw", withdrawalHandler.Add)
+	router.With(middleware.AuthMiddleware(authHandler)).Get("/api/user/withdrawals", withdrawalHandler.GetList)
+
+	return router
+}
+
+func (serverService *ServerService) RunServer(serverErr *chan error) {
+	if err := serverService.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		*serverErr <- err
+	} else {
+		*serverErr <- nil
+	}
+}
+
+func (serverService *ServerService) Shutdown() error {
+	// Graceful shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if shutdownErr := serverService.Server.Shutdown(shutdownCtx); shutdownErr != nil {
+		return shutdownErr
+	}
+
+	return nil
+}
